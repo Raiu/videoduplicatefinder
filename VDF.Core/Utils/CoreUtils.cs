@@ -16,13 +16,16 @@
 
 using System.Runtime.InteropServices;
 
-namespace VDF.Core.Utils {
-	public static class CoreUtils {
-		public static bool IsWindows;
-		public static string CurrentFolder;
-		static CoreUtils() {
-			IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-			CurrentFolder = Path.GetDirectoryName(typeof(CoreUtils).Assembly.Location)!;
-		}
+namespace VDF.Core.Utils;
+
+public static class CoreUtils
+{
+	public static bool IsWindows;
+	public static string CurrentFolder;
+
+	static CoreUtils()
+	{
+		IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+		CurrentFolder = Path.GetDirectoryName(typeof(CoreUtils).Assembly.Location)!;
 	}
 }

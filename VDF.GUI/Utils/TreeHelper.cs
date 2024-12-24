@@ -14,30 +14,38 @@
 // */
 //
 
-using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
 
-namespace VDF.GUI.Utils {
-	static class TreeHelper {
+namespace VDF.GUI.Utils;
 
-		static List<T> GetVisualTreeObjects<T>(this Control obj) where T : Control {
-			var objects = new List<T>();
-			foreach (Control child in obj.GetVisualChildren()) {
-				if (child is T requestedType)
-					objects.Add(requestedType);
-				objects.AddRange(child.GetVisualTreeObjects<T>());
-			}
-			return objects;
+static class TreeHelper
+{
+	static List<T> GetVisualTreeObjects<T>(this Control obj)
+		where T : Control
+	{
+		var objects = new List<T>();
+		foreach (Control child in obj.GetVisualChildren())
+		{
+			if (child is T requestedType)
+				objects.Add(requestedType);
+			objects.AddRange(child.GetVisualTreeObjects<T>());
 		}
-		public static void ToggleExpander(this DataGrid datagrid, bool expand) {
-			List<DataGridRowGroupHeader> groupHeaderList = GetVisualTreeObjects<DataGridRowGroupHeader>(datagrid);
-			if (groupHeaderList.Count == 0) return;
-			foreach (DataGridRowGroupHeader header in groupHeaderList) {
-				foreach (var e in GetVisualTreeObjects<ToggleButton>(header))
-					e.IsChecked = expand;
-			}
+		return objects;
+	}
+
+	public static void ToggleExpander(this DataGrid datagrid, bool expand)
+	{
+		List<DataGridRowGroupHeader> groupHeaderList = GetVisualTreeObjects<DataGridRowGroupHeader>(
+			datagrid
+		);
+		if (groupHeaderList.Count == 0)
+			return;
+		foreach (DataGridRowGroupHeader header in groupHeaderList)
+		{
+			foreach (var e in GetVisualTreeObjects<ToggleButton>(header))
+				e.IsChecked = expand;
 		}
 	}
 }

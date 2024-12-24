@@ -17,14 +17,17 @@
     Icon="/Assets/icon.ico"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
-    <Border BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}" BorderThickness="2">
-        <Grid ColumnDefinitions="Auto, Auto, *" RowDefinitions="Auto, *">
+    <Border BorderBrush="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+            BorderThickness="2">
+        <Grid ColumnDefinitions="Auto, Auto, *"
+              RowDefinitions="Auto, *">
             <controls:ExperimentalAcrylicBorder
                 x:Name="ExperimentalAcrylicBorderBackgroundWhite"
                 IsHitTestVisible="False"
                 IsVisible="False">
                 <controls:ExperimentalAcrylicBorder.Material>
-                    <media:ExperimentalAcrylicMaterial BackgroundSource="Digger" TintColor="White" />
+                    <media:ExperimentalAcrylicMaterial BackgroundSource="Digger"
+                                                       TintColor="White"/>
                 </controls:ExperimentalAcrylicBorder.Material>
             </controls:ExperimentalAcrylicBorder>
             <controls:ExperimentalAcrylicBorder
@@ -32,7 +35,8 @@
                 IsHitTestVisible="False"
                 IsVisible="False">
                 <controls:ExperimentalAcrylicBorder.Material>
-                    <media:ExperimentalAcrylicMaterial BackgroundSource="Digger" TintColor="Black" />
+                    <media:ExperimentalAcrylicMaterial BackgroundSource="Digger"
+                                                       TintColor="Black"/>
                 </controls:ExperimentalAcrylicBorder.Material>
             </controls:ExperimentalAcrylicBorder>
             <TextBlock
@@ -42,7 +46,7 @@
                 Margin="0,4,0,10"
                 HorizontalAlignment="Center"
                 IsHitTestVisible="false"
-                Text="{Binding #ThumbnailComparerWindow.Title}" />
+                Text="{Binding #ThumbnailComparerWindow.Title}"/>
             <ListBox
                 x:Name="ListBoxItems"
                 Grid.Row="1"
@@ -57,11 +61,11 @@
                                 MaxWidth="80"
                                 IsVisible="{Binding !IsLoadingThumbnail}"
                                 Source="{Binding Thumbnail}"
-                                Stretch="Uniform" />
+                                Stretch="Uniform"/>
                             <TextBlock
                                 MaxWidth="80"
                                 Text="{Binding Item.ItemInfo.Path}"
-                                TextWrapping="Wrap" />
+                                TextWrapping="Wrap"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -71,12 +75,12 @@
                 Grid.Column="1"
                 Width="1"
                 Margin="10,20"
-                Background="{DynamicResource SystemControlHighlightBaseLowBrush}" />
+                Background="{DynamicResource SystemControlHighlightBaseLowBrush}"/>
             <Border
                 Grid.Row="1"
                 Grid.Column="2"
                 Background="{DynamicResource SystemControlBackgroundChromeBlackLowBrush}">
-                <Image Source="{Binding #ListBoxItems.SelectedItem.Thumbnail}" />
+                <Image Source="{Binding #ListBoxItems.SelectedItem.Thumbnail}"/>
             </Border>
         </Grid>
     </Border>

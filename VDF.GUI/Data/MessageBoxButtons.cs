@@ -14,14 +14,14 @@
 // */
 //
 
-namespace VDF.GUI.Data {
+namespace VDF.GUI.Data;
 
-	[Flags]
-	public enum MessageBoxButtons {
-		None = 0,
-		Ok = 1,
-		Cancel = 2,
-		Yes = 4,
-		No = 8
-	}
+[Flags]
+public enum MessageBoxButtons
+{
+	None = 0,
+	Ok = 1,
+	Cancel = 2,
+	Yes = 4,
+	No = 8,
 }

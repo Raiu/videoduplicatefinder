@@ -17,22 +17,22 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using VDF.GUI.Data;
 using VDF.GUI.ViewModels;
 using VDF.GUI.Views;
 
-namespace VDF.GUI {
-	public class App : Application {
-		public override void Initialize() => AvaloniaXamlLoader.Load(this);
+namespace VDF.GUI;
 
-		public override void OnFrameworkInitializationCompleted() {
-			if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-				desktop.MainWindow = new MainWindow {
-					DataContext = new MainWindowVM(),
-				};
-			}
+public class App : Application
+{
+	public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
-			base.OnFrameworkInitializationCompleted();
+	public override void OnFrameworkInitializationCompleted()
+	{
+		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		{
+			desktop.MainWindow = new MainWindow { DataContext = new MainWindowVM() };
 		}
+
+		base.OnFrameworkInitializationCompleted();
 	}
 }

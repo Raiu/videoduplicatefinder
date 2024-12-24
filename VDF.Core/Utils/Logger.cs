@@ -14,26 +14,36 @@
 // */
 //
 
-namespace VDF.Core.Utils {
-	public sealed class Logger {
+namespace VDF.Core.Utils;
+
+public sealed class Logger
+{
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-		static Logger instance;
+	static Logger instance;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-		public static Logger Instance => instance ??= new Logger();
+	public static Logger Instance => instance ??= new Logger();
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-		public event LogEventHandler LogItemAdded;
-		public delegate void LogEventHandler(string foo);
+	public event LogEventHandler LogItemAdded;
+	public delegate void LogEventHandler(string foo);
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-		static readonly object lockObject = new();
-		public void Info(string text) {
-			LogItemAdded?.Invoke($"{DateTime.Now:HH:mm:ss} => {text}");
-			lock (lockObject) {
-				File.AppendAllText(Path.Combine(CoreUtils.CurrentFolder, "log.txt"), $"{DateTime.Now:HH:mm:ss} => {text}{Environment.NewLine}");
-			}
-		}
-		public void InsertSeparator(char separatorChar) {
-			LogItemAdded?.Invoke($"{Environment.NewLine}{new String(separatorChar, 150)}{Environment.NewLine}");
+	static readonly object lockObject = new();
+
+	public void Info(string text)
+	{
+		LogItemAdded?.Invoke($"{DateTime.Now:HH:mm:ss} => {text}");
+		lock (lockObject)
+		{
+			File.AppendAllText(
+				Path.Combine(CoreUtils.CurrentFolder, "log.txt"),
+				$"{DateTime.Now:HH:mm:ss} => {text}{Environment.NewLine}"
+			);
 		}
 	}
 
+	public void InsertSeparator(char separatorChar)
+	{
+		LogItemAdded?.Invoke(
+			$"{Environment.NewLine}{new String(separatorChar, 150)}{Environment.NewLine}"
+		);
+	}
 }

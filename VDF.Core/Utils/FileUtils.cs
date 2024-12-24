@@ -17,159 +17,199 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace VDF.Core.Utils {
-	internal static class FileUtils {
-		internal static readonly string[] ImageExtensions = {
-			".jpg",
-			".jpeg",
-			".png",
-			".gif",
-			".bmp",
-			".tiff",
-			".webp"};
-		static readonly string[] VideoExtensions = {
-			".mp4",
-			".wmv",
-			".avi",
-			".mkv",
-			".flv",
-			".mov",
-			".mpg",
-			".mpeg",
-			".m4v",
-			".asf",
-			".f4v",
-			".webm",
-			".divx",
-			".m2t",
-			".m2ts",
-			".vob",
-			".ts"
-		};
-		static readonly string[] AllExtensions = VideoExtensions.Concat(ImageExtensions).ToArray();
-		internal static List<FileInfo> GetFilesRecursive(string initial, bool ignoreReadonly, bool ignoreReparsePoints, bool recursive, bool includeImages, List<string> excludeFolders) {
-			EnumerationOptions enumerationOptions = new() {
-				IgnoreInaccessible = true,
-				AttributesToSkip = FileAttributes.System
-			};
+namespace VDF.Core.Utils;
 
-			if (ignoreReadonly)
-				enumerationOptions.AttributesToSkip |= FileAttributes.ReadOnly;
-			if (ignoreReparsePoints)
-				enumerationOptions.AttributesToSkip |= FileAttributes.ReparsePoint;
+internal static class FileUtils
+{
+	internal static readonly string[] ImageExtensions =
+	{
+		".jpg",
+		".jpeg",
+		".png",
+		".gif",
+		".bmp",
+		".tiff",
+		".webp",
+	};
+	static readonly string[] VideoExtensions =
+	{
+		".mp4",
+		".wmv",
+		".avi",
+		".mkv",
+		".flv",
+		".mov",
+		".mpg",
+		".mpeg",
+		".m4v",
+		".asf",
+		".f4v",
+		".webm",
+		".divx",
+		".m2t",
+		".m2ts",
+		".vob",
+		".ts",
+	};
+	static readonly string[] AllExtensions = VideoExtensions.Concat(ImageExtensions).ToArray();
 
-			List<FileInfo> files = new();
-			Queue<DirectoryInfo> subFolders = new();
-			subFolders.Enqueue(new(initial));
+	internal static List<FileInfo> GetFilesRecursive(
+		string initial,
+		bool ignoreReadonly,
+		bool ignoreReparsePoints,
+		bool recursive,
+		bool includeImages,
+		List<string> excludeFolders
+	)
+	{
+		EnumerationOptions enumerationOptions =
+			new() { IgnoreInaccessible = true, AttributesToSkip = FileAttributes.System };
 
-			while (subFolders.Count > 0) {
-				DirectoryInfo currentFolder = subFolders.Dequeue();
-				try {
+		if (ignoreReadonly)
+			enumerationOptions.AttributesToSkip |= FileAttributes.ReadOnly;
+		if (ignoreReparsePoints)
+			enumerationOptions.AttributesToSkip |= FileAttributes.ReparsePoint;
 
-					files.AddRange(currentFolder.EnumerateFiles("*", enumerationOptions)
-					.Where(f => (includeImages ? AllExtensions : VideoExtensions)
-					.Any(x => f.FullName.EndsWith(x, StringComparison.OrdinalIgnoreCase))));
+		List<FileInfo> files = new();
+		Queue<DirectoryInfo> subFolders = new();
+		subFolders.Enqueue(new(initial));
 
-					if (!recursive)
-						break;
-					foreach (DirectoryInfo subFolder in currentFolder.EnumerateDirectories("*", enumerationOptions)
-						.Where(d => !excludeFolders.Any(x => d.FullName.Equals(x, StringComparison.OrdinalIgnoreCase))))
-						subFolders.Enqueue(subFolder);
-				}
-				catch (DirectoryNotFoundException) { }
-				catch (Exception e) {
-					Logger.Instance.Info($"Failed to enumerate '{currentFolder.FullName}' because of: {e}");
-				}
+		while (subFolders.Count > 0)
+		{
+			DirectoryInfo currentFolder = subFolders.Dequeue();
+			try
+			{
+				files.AddRange(
+					currentFolder
+						.EnumerateFiles("*", enumerationOptions)
+						.Where(f =>
+							(includeImages ? AllExtensions : VideoExtensions).Any(x =>
+								f.FullName.EndsWith(x, StringComparison.OrdinalIgnoreCase)
+							)
+						)
+				);
+
+				if (!recursive)
+					break;
+				foreach (
+					DirectoryInfo subFolder in currentFolder
+						.EnumerateDirectories("*", enumerationOptions)
+						.Where(d =>
+							!excludeFolders.Any(x =>
+								d.FullName.Equals(x, StringComparison.OrdinalIgnoreCase)
+							)
+						)
+				)
+					subFolders.Enqueue(subFolder);
 			}
-
-			return files;
-
+			catch (DirectoryNotFoundException) { }
+			catch (Exception e)
+			{
+				Logger.Instance.Info(
+					$"Failed to enumerate '{currentFolder.FullName}' because of: {e}"
+				);
+			}
 		}
 
-		/// <summary>
-		/// Get safe path on all systems ignoring slashes
-		/// </summary>
-		/// <param name="path1"></param>
-		/// <param name="path2"></param>
-		/// <returns></returns>
-		internal static string SafePathCombine(string path1, string path2) {
-			if (!Path.IsPathRooted(path2))
-				Path.Combine(path1, path2);
-
-			path2 = path2.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-			return Path.Combine(path1, path2);
-		}
-
-		/// <summary>
-		/// Possible flags for the SHFileOperation method.
-		/// </summary>
-		[Flags]
-		internal enum FileOperationFlags : ushort {
-			/// <summary>
-			/// Do not show a dialog during the process
-			/// </summary>
-			FOF_SILENT = 0x0004,
-			/// <summary>
-			/// Do not ask the user to confirm selection
-			/// </summary>
-			FOF_NOCONFIRMATION = 0x0010,
-			/// <summary>
-			/// Delete the file to the recycle bin.  (Required flag to send a file to the bin
-			/// </summary>
-			FOF_ALLOWUNDO = 0x0040,
-			/// <summary>
-			/// Do not show the names of the files or folders that are being recycled.
-			/// </summary>
-			FOF_SIMPLEPROGRESS = 0x0100,
-			/// <summary>
-			/// Surpress errors, if any occur during the process.
-			/// </summary>
-			FOF_NOERRORUI = 0x0400,
-			/// <summary>
-			/// Warn if files are too big to fit in the recycle bin and will need
-			/// to be deleted completely.
-			/// </summary>
-			FOF_WANTNUKEWARNING = 0x4000,
-		}
-
-		/// <summary>
-		/// File Operation Function Type for SHFileOperation
-		/// </summary>
-		internal enum FileOperationType : uint {
-			/// <summary>
-			/// Move the objects
-			/// </summary>
-			FO_MOVE = 0x0001,
-			/// <summary>
-			/// Copy the objects
-			/// </summary>
-			FO_COPY = 0x0002,
-			/// <summary>
-			/// Delete (or recycle) the objects
-			/// </summary>
-			FO_DELETE = 0x0003,
-			/// <summary>
-			/// Rename the object(s)
-			/// </summary>
-			FO_RENAME = 0x0004,
-		}
-
-		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-		internal struct SHFILEOPSTRUCT {
-
-			public IntPtr hwnd;
-			[MarshalAs(UnmanagedType.U4)]
-			public FileOperationType wFunc;
-			public string pFrom;
-			public string pTo;
-			public FileOperationFlags fFlags;
-			[MarshalAs(UnmanagedType.Bool)]
-			public bool fAnyOperationsAborted;
-			public IntPtr hNameMappings;
-			public string lpszProgressTitle;
-		}
-
-		[DllImport("shell32.dll", CharSet = CharSet.Auto)]
-		internal static extern int SHFileOperation(ref SHFILEOPSTRUCT FileOp);
+		return files;
 	}
+
+	/// <summary>
+	/// Get safe path on all systems ignoring slashes
+	/// </summary>
+	/// <param name="path1"></param>
+	/// <param name="path2"></param>
+	/// <returns></returns>
+	internal static string SafePathCombine(string path1, string path2)
+	{
+		if (!Path.IsPathRooted(path2))
+			Path.Combine(path1, path2);
+
+		path2 = path2.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+		return Path.Combine(path1, path2);
+	}
+
+	/// <summary>
+	/// Possible flags for the SHFileOperation method.
+	/// </summary>
+	[Flags]
+	internal enum FileOperationFlags : ushort
+	{
+		/// <summary>
+		/// Do not show a dialog during the process
+		/// </summary>
+		FOF_SILENT = 0x0004,
+
+		/// <summary>
+		/// Do not ask the user to confirm selection
+		/// </summary>
+		FOF_NOCONFIRMATION = 0x0010,
+
+		/// <summary>
+		/// Delete the file to the recycle bin.  (Required flag to send a file to the bin
+		/// </summary>
+		FOF_ALLOWUNDO = 0x0040,
+
+		/// <summary>
+		/// Do not show the names of the files or folders that are being recycled.
+		/// </summary>
+		FOF_SIMPLEPROGRESS = 0x0100,
+
+		/// <summary>
+		/// Surpress errors, if any occur during the process.
+		/// </summary>
+		FOF_NOERRORUI = 0x0400,
+
+		/// <summary>
+		/// Warn if files are too big to fit in the recycle bin and will need
+		/// to be deleted completely.
+		/// </summary>
+		FOF_WANTNUKEWARNING = 0x4000,
+	}
+
+	/// <summary>
+	/// File Operation Function Type for SHFileOperation
+	/// </summary>
+	internal enum FileOperationType : uint
+	{
+		/// <summary>
+		/// Move the objects
+		/// </summary>
+		FO_MOVE = 0x0001,
+
+		/// <summary>
+		/// Copy the objects
+		/// </summary>
+		FO_COPY = 0x0002,
+
+		/// <summary>
+		/// Delete (or recycle) the objects
+		/// </summary>
+		FO_DELETE = 0x0003,
+
+		/// <summary>
+		/// Rename the object(s)
+		/// </summary>
+		FO_RENAME = 0x0004,
+	}
+
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+	internal struct SHFILEOPSTRUCT
+	{
+		public IntPtr hwnd;
+
+		[MarshalAs(UnmanagedType.U4)]
+		public FileOperationType wFunc;
+		public string pFrom;
+		public string pTo;
+		public FileOperationFlags fFlags;
+
+		[MarshalAs(UnmanagedType.Bool)]
+		public bool fAnyOperationsAborted;
+		public IntPtr hNameMappings;
+		public string lpszProgressTitle;
+	}
+
+	[DllImport("shell32.dll", CharSet = CharSet.Auto)]
+	internal static extern int SHFileOperation(ref SHFILEOPSTRUCT FileOp);
 }

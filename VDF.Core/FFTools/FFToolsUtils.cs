@@ -17,73 +17,104 @@
 using System.Runtime.InteropServices;
 using VDF.Core.Utils;
 
-namespace VDF.Core.FFTools {
-	static class FFToolsUtils {
+namespace VDF.Core.FFTools;
 
-		const string FFprobeExecutableName = "ffprobe";
-		const string FFmpegExecutableName = "ffmpeg";
-		static readonly string ffProbePlatformName;
-		static readonly string ffMpegPlatformName;
-		public enum FFTool {
-			FFProbe,
-			FFmpeg
-		}
+static class FFToolsUtils
+{
+	const string FFprobeExecutableName = "ffprobe";
+	const string FFmpegExecutableName = "ffmpeg";
+	static readonly string ffProbePlatformName;
+	static readonly string ffMpegPlatformName;
 
-		static FFToolsUtils() {
-			ffProbePlatformName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? FFprobeExecutableName + ".exe" : FFprobeExecutableName;
-			ffMpegPlatformName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? FFmpegExecutableName + ".exe" : FFmpegExecutableName;
-		}
-
-		/// <summary>
-		/// Gets path of ffprobe or ffmpeg
-		/// </summary>
-		/// <param name="tool"></param>
-		/// <returns>path or null if not found</returns>
-		internal static string? GetPath(FFTool tool) {
-
-			if (File.Exists($"{CoreUtils.CurrentFolder}\\bin\\{(tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName)}"))
-				return $"{CoreUtils.CurrentFolder}\\bin\\{(tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName)}";
-			if (File.Exists(Path.Combine(CoreUtils.CurrentFolder, tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName)))
-				return Path.Combine(CoreUtils.CurrentFolder, tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName);
-
-			var environmentVariables = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator);
-			if (environmentVariables == null) return null;
-
-			foreach (var path in environmentVariables) {
-				if (!Directory.Exists(path))
-					continue;
-
-				try {
-					FileInfo[] files = new DirectoryInfo(path).GetFiles(tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName, new EnumerationOptions {
-						IgnoreInaccessible = true,
-						MatchCasing = MatchCasing.CaseInsensitive
-					});
-
-					if (files.Length > 0)
-						return files[0].FullName;
-				}
-				catch (Exception) {
-#if DEBUG
-					throw;
-#endif
-				}
-			}
-			return null;
-		}
-
-		/// <summary>
-		/// Returns a path with long path prefix
-		/// </summary>
-		/// <param name="path">Path of the file</param>
-		/// <returns>On Windows: path with long path prefix. Otherwise same as input</returns>
-		internal static string LongPathFix(string path) {
-			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-				return path;
-			//Check if path is UNC, see https://github.com/0x90d/videoduplicatefinder/issues/443
-			if (path.StartsWith('\\'))
-				return $"\\\\?\\UNC\\{path.TrimStart('\\')}";
-			return $"\\\\?\\{path}";
-		}
+	public enum FFTool
+	{
+		FFProbe,
+		FFmpeg,
 	}
 
+	static FFToolsUtils()
+	{
+		ffProbePlatformName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			? FFprobeExecutableName + ".exe"
+			: FFprobeExecutableName;
+		ffMpegPlatformName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			? FFmpegExecutableName + ".exe"
+			: FFmpegExecutableName;
+	}
+
+	/// <summary>
+	/// Gets path of ffprobe or ffmpeg
+	/// </summary>
+	/// <param name="tool"></param>
+	/// <returns>path or null if not found</returns>
+	internal static string? GetPath(FFTool tool)
+	{
+		if (
+			File.Exists(
+				$"{CoreUtils.CurrentFolder}\\bin\\{(tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName)}"
+			)
+		)
+			return $"{CoreUtils.CurrentFolder}\\bin\\{(tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName)}";
+		if (
+			File.Exists(
+				Path.Combine(
+					CoreUtils.CurrentFolder,
+					tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName
+				)
+			)
+		)
+			return Path.Combine(
+				CoreUtils.CurrentFolder,
+				tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName
+			);
+
+		var environmentVariables = Environment
+			.GetEnvironmentVariable("PATH")
+			?.Split(Path.PathSeparator);
+		if (environmentVariables == null)
+			return null;
+
+		foreach (var path in environmentVariables)
+		{
+			if (!Directory.Exists(path))
+				continue;
+
+			try
+			{
+				FileInfo[] files = new DirectoryInfo(path).GetFiles(
+					tool == FFTool.FFmpeg ? ffMpegPlatformName : ffProbePlatformName,
+					new EnumerationOptions
+					{
+						IgnoreInaccessible = true,
+						MatchCasing = MatchCasing.CaseInsensitive,
+					}
+				);
+
+				if (files.Length > 0)
+					return files[0].FullName;
+			}
+			catch (Exception)
+			{
+#if DEBUG
+				throw;
+#endif
+			}
+		}
+		return null;
+	}
+
+	/// <summary>
+	/// Returns a path with long path prefix
+	/// </summary>
+	/// <param name="path">Path of the file</param>
+	/// <returns>On Windows: path with long path prefix. Otherwise same as input</returns>
+	internal static string LongPathFix(string path)
+	{
+		if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			return path;
+		//Check if path is UNC, see https://github.com/0x90d/videoduplicatefinder/issues/443
+		if (path.StartsWith('\\'))
+			return $"\\\\?\\UNC\\{path.TrimStart('\\')}";
+		return $"\\\\?\\{path}";
+	}
 }

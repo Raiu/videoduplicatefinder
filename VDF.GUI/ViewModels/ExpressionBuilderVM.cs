@@ -21,39 +21,57 @@ using ReactiveUI;
 using VDF.Core.ViewModels;
 using VDF.GUI.Views;
 
-namespace VDF.GUI.ViewModels {
-	public sealed class ExpressionBuilderVM : ReactiveObject {
-		public ExpressionBuilder host;
-		public ExpressionBuilderVM(ExpressionBuilder Host) {
-			host = Host;
-			var sb = new StringBuilder();
+namespace VDF.GUI.ViewModels;
 
-			var properties = typeof(DuplicateItem).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-			sb.AppendLine("Build a custom expression to select items. Your expression must return a bool: true if the video should be selected, false otherwise.");
-			sb.AppendLine();
-			foreach (var p in properties) {
-				sb.AppendLine($"item.{p.Name} ({p.PropertyType.Name})");
-			}
-			sb.AppendLine();
-			sb.AppendLine();
-			sb.AppendLine($"Example: item.{nameof(DuplicateItem.IsImage)} && arg.{nameof(DuplicateItemVM.ItemInfo)}.{nameof(DuplicateItem.SizeLong)} > 3000");
-			sb.AppendLine($"Example: item.{nameof(DuplicateItem.Path)}.Contains(\"imageFolder\")");
-			sb.AppendLine($"Example: item.{nameof(DuplicateItem.Duration)}.Minute > 15");
-			sb.AppendLine("Note: Expression uses 'Dynamic Expresso' library which understands C# syntax");
+public sealed class ExpressionBuilderVM : ReactiveObject
+{
+	public ExpressionBuilder host;
 
-			AvailableProperties = sb.ToString();
+	public ExpressionBuilderVM(ExpressionBuilder Host)
+	{
+		host = Host;
+		var sb = new StringBuilder();
+
+		var properties = typeof(DuplicateItem).GetProperties(
+			BindingFlags.Public | BindingFlags.Instance
+		);
+		sb.AppendLine(
+			"Build a custom expression to select items. Your expression must return a bool: true if the video should be selected, false otherwise."
+		);
+		sb.AppendLine();
+		foreach (var p in properties)
+		{
+			sb.AppendLine($"item.{p.Name} ({p.PropertyType.Name})");
 		}
-		string _ExpressionText = string.Empty;
-		public string ExpressionText {
-			get => _ExpressionText;
-			set => this.RaiseAndSetIfChanged(ref _ExpressionText, value);
-		}
-		public string AvailableProperties { get; }
-		public ReactiveCommand<Unit, Unit> CancelCommand => ReactiveCommand.Create(() => {
+		sb.AppendLine();
+		sb.AppendLine();
+		sb.AppendLine(
+			$"Example: item.{nameof(DuplicateItem.IsImage)} && arg.{nameof(DuplicateItemVM.ItemInfo)}.{nameof(DuplicateItem.SizeLong)} > 3000"
+		);
+		sb.AppendLine($"Example: item.{nameof(DuplicateItem.Path)}.Contains(\"imageFolder\")");
+		sb.AppendLine($"Example: item.{nameof(DuplicateItem.Duration)}.Minute > 15");
+		sb.AppendLine(
+			"Note: Expression uses 'Dynamic Expresso' library which understands C# syntax"
+		);
+
+		AvailableProperties = sb.ToString();
+	}
+
+	string _ExpressionText = string.Empty;
+	public string ExpressionText
+	{
+		get => _ExpressionText;
+		set => this.RaiseAndSetIfChanged(ref _ExpressionText, value);
+	}
+	public string AvailableProperties { get; }
+	public ReactiveCommand<Unit, Unit> CancelCommand =>
+		ReactiveCommand.Create(() =>
+		{
 			host.Close(false);
 		});
-		public ReactiveCommand<Unit, Unit> OKCommand => ReactiveCommand.Create(() => {
+	public ReactiveCommand<Unit, Unit> OKCommand =>
+		ReactiveCommand.Create(() =>
+		{
 			host.Close(true);
 		});
-	}
 }

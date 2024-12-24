@@ -14,8 +14,6 @@
 // */
 //
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,194 +21,260 @@ using FFmpeg.AutoGen;
 using VDF.Core.FFTools.FFmpegNative;
 using VDF.Core.Utils;
 
-namespace VDF.Core.FFTools {
-	internal static class FfmpegEngine {
-		public static readonly string FFmpegPath;
-		const int TimeoutDuration = 15_000; //15 seconds
-		public static FFHardwareAccelerationMode HardwareAccelerationMode;
-		public static string CustomFFArguments = string.Empty;
-		public static bool UseNativeBinding;
-		static FfmpegEngine() => FFmpegPath = FFToolsUtils.GetPath(FFToolsUtils.FFTool.FFmpeg) ?? string.Empty;
+namespace VDF.Core.FFTools;
 
-		
-		public static unsafe byte[]? GetThumbnail(FfmpegSettings settings, bool extendedLogging) {
+internal static class FfmpegEngine
+{
+	public static readonly string FFmpegPath;
+	const int TimeoutDuration = 15_000; //15 seconds
+	public static FFHardwareAccelerationMode HardwareAccelerationMode;
+	public static string CustomFFArguments = string.Empty;
+	public static bool UseNativeBinding;
 
-			try {
-				if (UseNativeBinding) {
-					bool isGrayByte = settings.GrayScale == 1;
+	static FfmpegEngine() =>
+		FFmpegPath = FFToolsUtils.GetPath(FFToolsUtils.FFTool.FFmpeg) ?? string.Empty;
 
-					AVHWDeviceType HWDevice = HardwareAccelerationMode switch {
-						FFHardwareAccelerationMode.vdpau => AVHWDeviceType.AV_HWDEVICE_TYPE_VDPAU,
-						FFHardwareAccelerationMode.dxva2 => AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2,
-						FFHardwareAccelerationMode.vaapi => AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI,
-						FFHardwareAccelerationMode.qsv => AVHWDeviceType.AV_HWDEVICE_TYPE_QSV,
-						FFHardwareAccelerationMode.cuda => AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA,
-						FFHardwareAccelerationMode.videotoolbox => AVHWDeviceType.AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
-						FFHardwareAccelerationMode.d3d11va => AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA,
-						FFHardwareAccelerationMode.drm => AVHWDeviceType.AV_HWDEVICE_TYPE_DRM,
-						FFHardwareAccelerationMode.opencl => AVHWDeviceType.AV_HWDEVICE_TYPE_OPENCL,
-						FFHardwareAccelerationMode.mediacodec => AVHWDeviceType.AV_HWDEVICE_TYPE_MEDIACODEC,
-						FFHardwareAccelerationMode.vulkan => AVHWDeviceType.AV_HWDEVICE_TYPE_VULKAN,
-						_ => AVHWDeviceType.AV_HWDEVICE_TYPE_NONE
-					};
+	public static unsafe byte[]? GetThumbnail(FfmpegSettings settings, bool extendedLogging)
+	{
+		try
+		{
+			if (UseNativeBinding)
+			{
+				bool isGrayByte = settings.GrayScale == 1;
 
-					using var vsd = new VideoStreamDecoder(settings.File, HWDevice);
-					if (vsd.PixelFormat < 0 || vsd.PixelFormat >= AVPixelFormat.AV_PIX_FMT_NB)
-						throw new Exception($"Invalid source pixel format");
+				AVHWDeviceType HWDevice = HardwareAccelerationMode switch
+				{
+					FFHardwareAccelerationMode.vdpau => AVHWDeviceType.AV_HWDEVICE_TYPE_VDPAU,
+					FFHardwareAccelerationMode.dxva2 => AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2,
+					FFHardwareAccelerationMode.vaapi => AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI,
+					FFHardwareAccelerationMode.qsv => AVHWDeviceType.AV_HWDEVICE_TYPE_QSV,
+					FFHardwareAccelerationMode.cuda => AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA,
+					FFHardwareAccelerationMode.videotoolbox =>
+						AVHWDeviceType.AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
+					FFHardwareAccelerationMode.d3d11va => AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA,
+					FFHardwareAccelerationMode.drm => AVHWDeviceType.AV_HWDEVICE_TYPE_DRM,
+					FFHardwareAccelerationMode.opencl => AVHWDeviceType.AV_HWDEVICE_TYPE_OPENCL,
+					FFHardwareAccelerationMode.mediacodec =>
+						AVHWDeviceType.AV_HWDEVICE_TYPE_MEDIACODEC,
+					FFHardwareAccelerationMode.vulkan => AVHWDeviceType.AV_HWDEVICE_TYPE_VULKAN,
+					_ => AVHWDeviceType.AV_HWDEVICE_TYPE_NONE,
+				};
 
-					Size sourceSize = vsd.FrameSize;
-					Size destinationSize = isGrayByte ? new Size(16, 16) :
-						settings.Fullsize == 1 ?
-							sourceSize :
-							new Size(100, Convert.ToInt32(sourceSize.Height * (100 / (double)sourceSize.Width)));
-					AVPixelFormat destinationPixelFormat = isGrayByte ? AVPixelFormat.AV_PIX_FMT_GRAY8 : AVPixelFormat.AV_PIX_FMT_BGRA;
-					using var vfc =
-						new VideoFrameConverter(sourceSize, vsd.PixelFormat, destinationSize, destinationPixelFormat);
+				using var vsd = new VideoStreamDecoder(settings.File, HWDevice);
+				if (vsd.PixelFormat < 0 || vsd.PixelFormat >= AVPixelFormat.AV_PIX_FMT_NB)
+					throw new Exception($"Invalid source pixel format");
 
-					if (!vsd.TryDecodeFrame(out var srcFrame, settings.Position))
-						throw new Exception($"Failed decoding frame at {settings.Position}");
-					AVFrame convertedFrame = vfc.Convert(srcFrame);
+				Size sourceSize = vsd.FrameSize;
+				Size destinationSize =
+					isGrayByte ? new Size(16, 16)
+					: settings.Fullsize == 1 ? sourceSize
+					: new Size(
+						100,
+						Convert.ToInt32(sourceSize.Height * (100 / (double)sourceSize.Width))
+					);
+				AVPixelFormat destinationPixelFormat = isGrayByte
+					? AVPixelFormat.AV_PIX_FMT_GRAY8
+					: AVPixelFormat.AV_PIX_FMT_BGRA;
+				using var vfc = new VideoFrameConverter(
+					sourceSize,
+					vsd.PixelFormat,
+					destinationSize,
+					destinationPixelFormat
+				);
 
-					if (isGrayByte) {
-						int length = ffmpeg.av_image_get_buffer_size(destinationPixelFormat, convertedFrame.width,
-							convertedFrame.height, 1).ThrowExceptionIfError();
-						byte[] data = new byte[length];
-						Marshal.Copy((IntPtr)convertedFrame.data[0], data, 0, length);
-						return data;
+				if (!vsd.TryDecodeFrame(out var srcFrame, settings.Position))
+					throw new Exception($"Failed decoding frame at {settings.Position}");
+				AVFrame convertedFrame = vfc.Convert(srcFrame);
+
+				if (isGrayByte)
+				{
+					int length = ffmpeg
+						.av_image_get_buffer_size(
+							destinationPixelFormat,
+							convertedFrame.width,
+							convertedFrame.height,
+							1
+						)
+						.ThrowExceptionIfError();
+					byte[] data = new byte[length];
+					Marshal.Copy((IntPtr)convertedFrame.data[0], data, 0, length);
+					return data;
+				}
+				else
+				{
+					int width = convertedFrame.width;
+					int height = convertedFrame.height;
+					var totalBytes = width * height * 4;
+					var rgbaBytes = new byte[totalBytes];
+					int stride = convertedFrame.linesize[0];
+					if (stride == width * 4)
+					{
+						Marshal.Copy((IntPtr)convertedFrame.data[0], rgbaBytes, 0, totalBytes);
 					}
-					else {
-						int width = convertedFrame.width;
-						int height = convertedFrame.height;
-						var totalBytes = width * height * 4;
-						var rgbaBytes = new byte[totalBytes];
-						int stride = convertedFrame.linesize[0];
-						if (stride == width * 4) {
-							Marshal.Copy((IntPtr)convertedFrame.data[0], rgbaBytes, 0, totalBytes);
+					else
+					{
+						var sourceOffset = 0;
+						var destOffset = 0;
+						var byteWidth = width * 4;
+						for (var y = 0; y < height; y++)
+						{
+							Marshal.Copy(
+								(IntPtr)convertedFrame.data[0] + sourceOffset,
+								rgbaBytes,
+								destOffset,
+								byteWidth
+							);
+							sourceOffset += stride;
+							destOffset += byteWidth;
 						}
-						else {
-							var sourceOffset = 0;
-							var destOffset = 0;
-							var byteWidth = width * 4;
-							for (var y = 0; y < height; y++) {
-								Marshal.Copy((IntPtr)convertedFrame.data[0] + sourceOffset, rgbaBytes, destOffset, byteWidth);
-								sourceOffset += stride;
-								destOffset += byteWidth;
-							}
-						}
-						var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(rgbaBytes, width, height);
-						using MemoryStream stream = new();
-						image.Save(stream, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
-						bool equal = rgbaBytes.SequenceEqual(stream.ToArray());
-						return stream.ToArray();
 					}
+					var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(
+						rgbaBytes,
+						width,
+						height
+					);
+					using MemoryStream stream = new();
+					image.Save(stream, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+					bool equal = rgbaBytes.SequenceEqual(stream.ToArray());
+					return stream.ToArray();
 				}
 			}
-			catch (Exception e) {
-				Logger.Instance.Info($"Failed using native FFmpeg binding on '{settings.File}', try switching to process mode. Exception: {e}");
-			}
+		}
+		catch (Exception e)
+		{
+			Logger.Instance.Info(
+				$"Failed using native FFmpeg binding on '{settings.File}', try switching to process mode. Exception: {e}"
+			);
+		}
 
+		//https://docs.microsoft.com/en-us/dotnet/csharp/how-to/concatenate-multiple-strings#string-literals
+		string ffmpegArguments =
+			$" -hide_banner -loglevel {(extendedLogging ? "error" : "quiet")}"
+			+ $" -y -hwaccel {HardwareAccelerationMode} -ss {settings.Position} -i \"{FFToolsUtils.LongPathFix(settings.File)}\""
+			+ $" -t 1 -f {(settings.GrayScale == 1 ? "rawvideo -pix_fmt gray" : "mjpeg")} -vframes 1"
+			+ $" {(settings.GrayScale == 1 ? "-s 16x16" : (settings.Fullsize == 1 ? string.Empty : "-vf scale=100:-1"))} {CustomFFArguments} \"-\"";
 
-			//https://docs.microsoft.com/en-us/dotnet/csharp/how-to/concatenate-multiple-strings#string-literals
-			string ffmpegArguments = $" -hide_banner -loglevel {(extendedLogging ? "error" : "quiet")}" +
-				$" -y -hwaccel {HardwareAccelerationMode} -ss {settings.Position} -i \"{FFToolsUtils.LongPathFix(settings.File)}\"" +
-				$" -t 1 -f {(settings.GrayScale == 1 ? "rawvideo -pix_fmt gray" : "mjpeg")} -vframes 1" +
-				$" {(settings.GrayScale == 1 ? "-s 16x16" : (settings.Fullsize == 1 ? string.Empty : "-vf scale=100:-1"))} {CustomFFArguments} \"-\"";
-
-			using var process = new Process {
-				StartInfo = new ProcessStartInfo {
-					Arguments = ffmpegArguments,
-					FileName = FFmpegPath,
-					CreateNoWindow = true,
-					RedirectStandardInput = false,
-					RedirectStandardOutput = true,
-					WorkingDirectory = Path.GetDirectoryName(FFmpegPath)!,
-					RedirectStandardError = extendedLogging,
-					WindowStyle = ProcessWindowStyle.Hidden
-				}
-			};
-			string errOut = string.Empty;
-			byte[]? bytes = null;
-			try {
-				process.EnableRaisingEvents = true;
-				process.Start();
-				if (extendedLogging) {
-					process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) => {
+		using var process = new Process
+		{
+			StartInfo = new ProcessStartInfo
+			{
+				Arguments = ffmpegArguments,
+				FileName = FFmpegPath,
+				CreateNoWindow = true,
+				RedirectStandardInput = false,
+				RedirectStandardOutput = true,
+				WorkingDirectory = Path.GetDirectoryName(FFmpegPath)!,
+				RedirectStandardError = extendedLogging,
+				WindowStyle = ProcessWindowStyle.Hidden,
+			},
+		};
+		string errOut = string.Empty;
+		byte[]? bytes = null;
+		try
+		{
+			process.EnableRaisingEvents = true;
+			process.Start();
+			if (extendedLogging)
+			{
+				process.ErrorDataReceived += new DataReceivedEventHandler(
+					(sender, e) =>
+					{
 						if (e.Data?.Length > 0)
 							errOut += Environment.NewLine + e.Data;
-					});
-					process.BeginErrorReadLine();
-				}
-				using var ms = new MemoryStream();
-				process.StandardOutput.BaseStream.CopyTo(ms);
-
-				if (!process.WaitForExit(TimeoutDuration)) {
-					throw new TimeoutException($"FFmpeg timed out on file: {settings.File}");
-				}
-				else if (extendedLogging)
-					process.WaitForExit(); // Because of asynchronous event handlers, see: https://github.com/dotnet/runtime/issues/18789
-
-				if (process.ExitCode != 0)
-					throw new FFInvalidExitCodeException($"FFmpeg exited with: {process.ExitCode}");
-
-				bytes = ms.ToArray();
-				if (bytes.Length == 0)
-					bytes = null;   // Makes subsequent checks easier
-				else if (settings.GrayScale == 1 && bytes.Length != 256) {
-					bytes = null;
-					errOut += $"{Environment.NewLine}graybytes length != 256";
-				}
+					}
+				);
+				process.BeginErrorReadLine();
 			}
-			catch (Exception e) {
-				errOut += $"{Environment.NewLine}{e.Message}";
-				try {
-					if (process.HasExited == false)
-						process.Kill();
-				}
-				catch { }
+			using var ms = new MemoryStream();
+			process.StandardOutput.BaseStream.CopyTo(ms);
+
+			if (!process.WaitForExit(TimeoutDuration))
+			{
+				throw new TimeoutException($"FFmpeg timed out on file: {settings.File}");
+			}
+			else if (extendedLogging)
+				process.WaitForExit(); // Because of asynchronous event handlers, see: https://github.com/dotnet/runtime/issues/18789
+
+			if (process.ExitCode != 0)
+				throw new FFInvalidExitCodeException($"FFmpeg exited with: {process.ExitCode}");
+
+			bytes = ms.ToArray();
+			if (bytes.Length == 0)
+				bytes = null; // Makes subsequent checks easier
+			else if (settings.GrayScale == 1 && bytes.Length != 256)
+			{
 				bytes = null;
+				errOut += $"{Environment.NewLine}graybytes length != 256";
 			}
-			if (bytes == null || errOut.Length > 0) {
-				string message = $"{((bytes == null) ? "ERROR: Failed to retrieve" : "WARNING: Problems while retrieving")} {(settings.GrayScale == 1 ? "graybytes" : "thumbnail")} from: {settings.File}";
-				if (extendedLogging)
-					message += $":{Environment.NewLine}{FFmpegPath} {ffmpegArguments}";
-				Logger.Instance.Info($"{message}{errOut}");
-			}
-			return bytes;
 		}
-		internal static bool GetGrayBytesFromVideo(FileEntry videoFile, List<float> positions, bool extendedLogging) {
-			int tooDarkCounter = 0;
+		catch (Exception e)
+		{
+			errOut += $"{Environment.NewLine}{e.Message}";
+			try
+			{
+				if (process.HasExited == false)
+					process.Kill();
+			}
+			catch { }
+			bytes = null;
+		}
+		if (bytes == null || errOut.Length > 0)
+		{
+			string message =
+				$"{((bytes == null) ? "ERROR: Failed to retrieve" : "WARNING: Problems while retrieving")} {(settings.GrayScale == 1 ? "graybytes" : "thumbnail")} from: {settings.File}";
+			if (extendedLogging)
+				message += $":{Environment.NewLine}{FFmpegPath} {ffmpegArguments}";
+			Logger.Instance.Info($"{message}{errOut}");
+		}
+		return bytes;
+	}
 
-			for (int i = 0; i < positions.Count; i++) {
-				double position = videoFile.GetGrayBytesIndex(positions[i]);
-				if (videoFile.grayBytes.ContainsKey(position))
-					continue;
+	internal static bool GetGrayBytesFromVideo(
+		FileEntry videoFile,
+		List<float> positions,
+		bool extendedLogging
+	)
+	{
+		int tooDarkCounter = 0;
 
-				var data = GetThumbnail(new FfmpegSettings {
+		for (int i = 0; i < positions.Count; i++)
+		{
+			double position = videoFile.GetGrayBytesIndex(positions[i]);
+			if (videoFile.grayBytes.ContainsKey(position))
+				continue;
+
+			var data = GetThumbnail(
+				new FfmpegSettings
+				{
 					File = videoFile.Path,
 					Position = TimeSpan.FromSeconds(position),
 					GrayScale = 1,
-				}, extendedLogging);
-				if (data == null) {
-					videoFile.Flags.Set(EntryFlags.ThumbnailError);
-					return false;
-				}
-				if (!GrayBytesUtils.VerifyGrayScaleValues(data))
-					tooDarkCounter++;
-				videoFile.grayBytes.Add(position, data);
-			}
-			if (tooDarkCounter == positions.Count) {
-				videoFile.Flags.Set(EntryFlags.TooDark);
-				Logger.Instance.Info($"ERROR: Graybytes too dark of: {videoFile.Path}");
+				},
+				extendedLogging
+			);
+			if (data == null)
+			{
+				videoFile.Flags.Set(EntryFlags.ThumbnailError);
 				return false;
 			}
-			return true;
+			if (!GrayBytesUtils.VerifyGrayScaleValues(data))
+				tooDarkCounter++;
+			videoFile.grayBytes.Add(position, data);
 		}
+		if (tooDarkCounter == positions.Count)
+		{
+			videoFile.Flags.Set(EntryFlags.TooDark);
+			Logger.Instance.Info($"ERROR: Graybytes too dark of: {videoFile.Path}");
+			return false;
+		}
+		return true;
 	}
+}
 
-	internal struct FfmpegSettings {
-		public byte GrayScale;
-		public byte Fullsize;
-		public string File;
-		public TimeSpan Position;
-	}
+internal struct FfmpegSettings
+{
+	public byte GrayScale;
+	public byte Fullsize;
+	public string File;
+	public TimeSpan Position;
 }

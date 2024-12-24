@@ -17,43 +17,56 @@
 using VDF.Core.Utils;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Utils {
-	static class FileUtils {
-		/// <summary>
-		/// Copies file or folder to target destination and remain the folder structure
-		/// </summary>
-		/// <param name="pSource"></param>
-		/// <param name="pDest"></param>
-		/// <param name="pOverwriteDest"></param>
-		/// <param name="pMove"></param>
-		/// <param name="errors"></param>
-		public static void CopyFile(IEnumerable<DuplicateItemVM> pSource, string pDest, bool pOverwriteDest, bool pMove, out int errors) {
-			string destDirectory = Path.GetDirectoryName(pDest) ?? string.Empty;
-			Directory.CreateDirectory(destDirectory);
-			errors = 0;
-			foreach (var s in pSource) {
-				try {
-					var name = Path.GetFileNameWithoutExtension(s.ItemInfo.Path);
-					var ext = Path.GetExtension(s.ItemInfo.Path);
-					string temppath = Path.Combine(pDest, name + ext);
-					var counter = 0;
-					while (File.Exists(temppath)) {
-						temppath = Path.Combine(pDest, name + '_' + counter + ext);
-						counter++;
-					}
+namespace VDF.GUI.Utils;
 
-					if (pMove) 
-						File.Move(s.ItemInfo.Path, temppath, pOverwriteDest);
-					else
-						File.Copy(s.ItemInfo.Path, temppath, pOverwriteDest);
-					s.ItemInfo.Path = temppath;
+static class FileUtils
+{
+	/// <summary>
+	/// Copies file or folder to target destination and remain the folder structure
+	/// </summary>
+	/// <param name="pSource"></param>
+	/// <param name="pDest"></param>
+	/// <param name="pOverwriteDest"></param>
+	/// <param name="pMove"></param>
+	/// <param name="errors"></param>
+	public static void CopyFile(
+		IEnumerable<DuplicateItemVM> pSource,
+		string pDest,
+		bool pOverwriteDest,
+		bool pMove,
+		out int errors
+	)
+	{
+		string destDirectory = Path.GetDirectoryName(pDest) ?? string.Empty;
+		Directory.CreateDirectory(destDirectory);
+		errors = 0;
+		foreach (var s in pSource)
+		{
+			try
+			{
+				var name = Path.GetFileNameWithoutExtension(s.ItemInfo.Path);
+				var ext = Path.GetExtension(s.ItemInfo.Path);
+				string temppath = Path.Combine(pDest, name + ext);
+				var counter = 0;
+				while (File.Exists(temppath))
+				{
+					temppath = Path.Combine(pDest, name + '_' + counter + ext);
+					counter++;
 				}
-				catch (Exception e) {
-					Logger.Instance.Info($"Failed to copy '{pSource}' to '{pDest}', reason: {e.Message}");
-					errors++;
-				}
+
+				if (pMove)
+					File.Move(s.ItemInfo.Path, temppath, pOverwriteDest);
+				else
+					File.Copy(s.ItemInfo.Path, temppath, pOverwriteDest);
+				s.ItemInfo.Path = temppath;
 			}
-
+			catch (Exception e)
+			{
+				Logger.Instance.Info(
+					$"Failed to copy '{pSource}' to '{pDest}', reason: {e.Message}"
+				);
+				errors++;
+			}
 		}
 	}
 }

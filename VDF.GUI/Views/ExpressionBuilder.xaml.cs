@@ -18,23 +18,26 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Views {
-	public class ExpressionBuilder : Window {
-		public ExpressionBuilder() {
-			InitializeComponent();
-			DataContext = new ExpressionBuilderVM(this);
-			Owner = ApplicationHelpers.MainWindow;
-			var textBox = this.FindControl<TextBox>("TextBoxInput");
-			if (textBox != null) {
-				textBox.AttachedToVisualTree += (s, e) => {
-					textBox.Focus();
-				};
-			}
-			if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
-				RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+namespace VDF.GUI.Views;
+
+public class ExpressionBuilder : Window
+{
+	public ExpressionBuilder()
+	{
+		InitializeComponent();
+		DataContext = new ExpressionBuilderVM(this);
+		Owner = ApplicationHelpers.MainWindow;
+		var textBox = this.FindControl<TextBox>("TextBoxInput");
+		if (textBox != null)
+		{
+			textBox.AttachedToVisualTree += (s, e) =>
+			{
+				textBox.Focus();
+			};
 		}
-
-		void InitializeComponent() => AvaloniaXamlLoader.Load(this);		
-
+		if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
+			RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
 	}
+
+	void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

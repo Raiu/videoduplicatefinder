@@ -19,52 +19,66 @@ using Avalonia.Markup.Xaml;
 using VDF.GUI.Data;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Views {
+namespace VDF.GUI.Views;
 
-	public static class InputBoxService {
-		public static async Task<String> Show(string message, string defaultInput = "", string waterMark = "",
-			MessageBoxButtons buttons = MessageBoxButtons.Ok | MessageBoxButtons.Cancel, string? title = null) {
-			var dlg = new InputBoxView(message, defaultInput, waterMark, buttons, title) {
-				Icon = ApplicationHelpers.MainWindow.Icon
+public static class InputBoxService
+{
+	public static async Task<String> Show(
+		string message,
+		string defaultInput = "",
+		string waterMark = "",
+		MessageBoxButtons buttons = MessageBoxButtons.Ok | MessageBoxButtons.Cancel,
+		string? title = null
+	)
+	{
+		var dlg = new InputBoxView(message, defaultInput, waterMark, buttons, title)
+		{
+			Icon = ApplicationHelpers.MainWindow.Icon,
+		};
+		return await dlg.ShowDialog<String>(ApplicationHelpers.MainWindow);
+	}
+}
+
+public class InputBoxView : Window
+{
+	//Designer need this
+	public InputBoxView() => InitializeComponent();
+
+	public InputBoxView(
+		string message,
+		string defaultInput = "",
+		string waterMark = "",
+		MessageBoxButtons buttons = MessageBoxButtons.Ok | MessageBoxButtons.Cancel,
+		string? title = null
+	)
+	{
+		DataContext = new InputBoxVM();
+		((InputBoxVM)DataContext).host = this;
+		((InputBoxVM)DataContext).Message = message;
+		((InputBoxVM)DataContext).Input = defaultInput;
+		((InputBoxVM)DataContext).WaterMark = waterMark;
+		if (!string.IsNullOrEmpty(title))
+			((InputBoxVM)DataContext).Title = title;
+		((InputBoxVM)DataContext).HasCancelButton = (buttons & MessageBoxButtons.Cancel) != 0;
+		((InputBoxVM)DataContext).HasNoButton = (buttons & MessageBoxButtons.No) != 0;
+		((InputBoxVM)DataContext).HasOKButton = (buttons & MessageBoxButtons.Ok) != 0;
+		((InputBoxVM)DataContext).HasYesButton = (buttons & MessageBoxButtons.Yes) != 0;
+
+		InitializeComponent();
+
+		if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
+			RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+
+		var textBox = this.FindControl<TextBox>("TextBoxInput");
+		if (textBox != null)
+		{
+			textBox.AttachedToVisualTree += (s, e) =>
+			{
+				textBox.Focus();
+				textBox.SelectAll();
 			};
-			return await dlg.ShowDialog<String>(ApplicationHelpers.MainWindow);
 		}
 	}
 
-
-	public class InputBoxView : Window {
-
-		//Designer need this
-		public InputBoxView() => InitializeComponent();
-
-		public InputBoxView(string message, string defaultInput = "", string waterMark = "",
-			MessageBoxButtons buttons = MessageBoxButtons.Ok | MessageBoxButtons.Cancel, string? title = null) {
-			DataContext = new InputBoxVM();
-			((InputBoxVM)DataContext).host = this;
-			((InputBoxVM)DataContext).Message = message;
-			((InputBoxVM)DataContext).Input = defaultInput;
-			((InputBoxVM)DataContext).WaterMark = waterMark;
-			if (!string.IsNullOrEmpty(title))
-				((InputBoxVM)DataContext).Title = title;
-			((InputBoxVM)DataContext).HasCancelButton = (buttons & MessageBoxButtons.Cancel) != 0;
-			((InputBoxVM)DataContext).HasNoButton = (buttons & MessageBoxButtons.No) != 0;
-			((InputBoxVM)DataContext).HasOKButton = (buttons & MessageBoxButtons.Ok) != 0;
-			((InputBoxVM)DataContext).HasYesButton = (buttons & MessageBoxButtons.Yes) != 0;
-
-			InitializeComponent();
-
-			if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
-				RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
-
-			var textBox = this.FindControl<TextBox>("TextBoxInput");
-			if (textBox != null) {
-				textBox.AttachedToVisualTree += (s, e) => {
-					textBox.Focus();
-					textBox.SelectAll();
-				};
-			}
-		}
-		private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
-	}
-
+	private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

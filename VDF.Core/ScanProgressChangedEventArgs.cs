@@ -14,15 +14,13 @@
 // */
 //
 
-using System;
+namespace VDF.Core;
 
-namespace VDF.Core {
-	public struct ScanProgressChangedEventArgs {
-
-		public string CurrentFile;
-		public int CurrentPosition;
-		public int MaxPosition;
-		public TimeSpan Elapsed;
-		public TimeSpan Remaining;
-	}
+public struct ScanProgressChangedEventArgs
+{
+	public string CurrentFile;
+	public int CurrentPosition;
+	public int MaxPosition;
+	public TimeSpan Elapsed;
+	public TimeSpan Remaining;
 }

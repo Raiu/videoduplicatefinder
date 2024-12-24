@@ -14,20 +14,21 @@
 // */
 //
 
-namespace VDF.Core.FFTools {
-	public enum FFHardwareAccelerationMode {
-		none,
-		auto,
-		vdpau,
-		dxva2,
-		vaapi,
-		qsv,
-		cuda,
-		videotoolbox,
-		d3d11va,
-		drm,
-		opencl,
-		mediacodec,
-		vulkan
-	}
+namespace VDF.Core.FFTools;
+
+public enum FFHardwareAccelerationMode
+{
+	none,
+	auto,
+	vdpau,
+	dxva2,
+	vaapi,
+	qsv,
+	cuda,
+	videotoolbox,
+	d3d11va,
+	drm,
+	opencl,
+	mediacodec,
+	vulkan,
 }

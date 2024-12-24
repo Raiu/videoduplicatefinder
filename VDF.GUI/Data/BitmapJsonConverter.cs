@@ -19,20 +19,23 @@ using System.Text.Json.Serialization;
 using Avalonia.Media.Imaging;
 using VDF.GUI.Utils;
 
-namespace VDF.GUI.Data {
-	internal class BitmapJsonConverter : JsonConverter<Bitmap> {
-		public override Bitmap Read(
-			ref Utf8JsonReader reader,
-			Type typeToConvert,
-			JsonSerializerOptions options) {
-			using var ms = new MemoryStream(reader.GetBytesFromBase64());
-			return new Bitmap(ms);
-		}
+namespace VDF.GUI.Data;
 
-		public override void Write(
-			Utf8JsonWriter writer,
-			Bitmap image,
-			JsonSerializerOptions options) =>
-				writer.WriteBase64StringValue(image.ToByteArray());
+internal class BitmapJsonConverter : JsonConverter<Bitmap>
+{
+	public override Bitmap Read(
+		ref Utf8JsonReader reader,
+		Type typeToConvert,
+		JsonSerializerOptions options
+	)
+	{
+		using var ms = new MemoryStream(reader.GetBytesFromBase64());
+		return new Bitmap(ms);
 	}
+
+	public override void Write(
+		Utf8JsonWriter writer,
+		Bitmap image,
+		JsonSerializerOptions options
+	) => writer.WriteBase64StringValue(image.ToByteArray());
 }

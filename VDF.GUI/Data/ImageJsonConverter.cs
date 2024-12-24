@@ -19,20 +19,20 @@ using System.Text.Json.Serialization;
 using SixLabors.ImageSharp;
 using VDF.GUI.Utils;
 
-namespace VDF.GUI.Data {
-	internal class ImageJsonConverter : JsonConverter<Image> {
-		public override Image Read(
-			ref Utf8JsonReader reader,
-			Type typeToConvert,
-			JsonSerializerOptions options) {
-			using var ms = new MemoryStream(reader.GetBytesFromBase64());
-			return Image.Load(ms);
-		}
+namespace VDF.GUI.Data;
 
-		public override void Write(
-			Utf8JsonWriter writer,
-			Image image,
-			JsonSerializerOptions options) =>
-				writer.WriteBase64StringValue(image.ToByteArray());
+internal class ImageJsonConverter : JsonConverter<Image>
+{
+	public override Image Read(
+		ref Utf8JsonReader reader,
+		Type typeToConvert,
+		JsonSerializerOptions options
+	)
+	{
+		using var ms = new MemoryStream(reader.GetBytesFromBase64());
+		return Image.Load(ms);
 	}
+
+	public override void Write(Utf8JsonWriter writer, Image image, JsonSerializerOptions options) =>
+		writer.WriteBase64StringValue(image.ToByteArray());
 }

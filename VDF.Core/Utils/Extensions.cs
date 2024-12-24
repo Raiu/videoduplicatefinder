@@ -17,25 +17,32 @@
 using System.Diagnostics;
 using System.Globalization;
 
-namespace VDF.Core.Utils {
-	public static class Extensions {
-		public static TimeSpan StopGetElapsedAndRestart(this Stopwatch stopwatch) {
-			stopwatch.Stop();
-			var elapsed = stopwatch.Elapsed;
-			stopwatch.Restart();
-			return elapsed;
-		}
-		public static TimeSpan TrimMiliseconds(this TimeSpan ts) => new(ts.Days, ts.Hours, ts.Minutes, ts.Seconds);
+namespace VDF.Core.Utils;
 
-		static readonly string[] suf = { " B", " KB", " MB", " GB", " TB", " PB", " EB" };
-		public static string BytesToString(this long byteCount) {
-			if (byteCount == 0)
-				return "0" + suf[0];
-			var bytes = Math.Abs(byteCount);
-			var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-			var num = Math.Round(bytes / Math.Pow(1024, place), 1);
-			return (Math.Sign(byteCount) * num).ToString(CultureInfo.InvariantCulture) + suf[place];
-		}
-		public static long BytesToMegaBytes(this long byteCount) => (long)((byteCount / 1024f) / 1024f);
+public static class Extensions
+{
+	public static TimeSpan StopGetElapsedAndRestart(this Stopwatch stopwatch)
+	{
+		stopwatch.Stop();
+		var elapsed = stopwatch.Elapsed;
+		stopwatch.Restart();
+		return elapsed;
 	}
+
+	public static TimeSpan TrimMiliseconds(this TimeSpan ts) =>
+		new(ts.Days, ts.Hours, ts.Minutes, ts.Seconds);
+
+	static readonly string[] suf = { " B", " KB", " MB", " GB", " TB", " PB", " EB" };
+
+	public static string BytesToString(this long byteCount)
+	{
+		if (byteCount == 0)
+			return "0" + suf[0];
+		var bytes = Math.Abs(byteCount);
+		var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+		var num = Math.Round(bytes / Math.Pow(1024, place), 1);
+		return (Math.Sign(byteCount) * num).ToString(CultureInfo.InvariantCulture) + suf[place];
+	}
+
+	public static long BytesToMegaBytes(this long byteCount) => (long)((byteCount / 1024f) / 1024f);
 }

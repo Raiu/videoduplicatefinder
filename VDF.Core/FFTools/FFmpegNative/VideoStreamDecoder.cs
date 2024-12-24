@@ -16,149 +16,199 @@
 
 using FFmpeg.AutoGen;
 
-namespace VDF.Core.FFTools.FFmpegNative {
-	unsafe class VideoStreamDecoder : IDisposable {
-		private readonly AVCodecContext* _pCodecContext;
-		private readonly AVFormatContext* _pFormatContext;
-		private readonly AVFrame* _pFrame;
-		private readonly AVPacket* _pPacket;
-		private readonly AVFrame* _pReceivedFrame;
-		private readonly int _streamIndex;
+namespace VDF.Core.FFTools.FFmpegNative;
 
-		public VideoStreamDecoder(string url, AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE) {
-			_pFormatContext = ffmpeg.avformat_alloc_context();
-			_pReceivedFrame = ffmpeg.av_frame_alloc();
-			var pFormatContext = _pFormatContext;
-			ffmpeg.avformat_open_input(&pFormatContext, url, null, null).ThrowExceptionIfError();
-			ffmpeg.avformat_find_stream_info(_pFormatContext, null).ThrowExceptionIfError();
-			AVCodec* codec = null;
+unsafe class VideoStreamDecoder : IDisposable
+{
+	private readonly AVCodecContext* _pCodecContext;
+	private readonly AVFormatContext* _pFormatContext;
+	private readonly AVFrame* _pFrame;
+	private readonly AVPacket* _pPacket;
+	private readonly AVFrame* _pReceivedFrame;
+	private readonly int _streamIndex;
 
-			_streamIndex = ffmpeg.av_find_best_stream(_pFormatContext,
-				AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0).ThrowExceptionIfError();
-			_pCodecContext = ffmpeg.avcodec_alloc_context3(codec);
-			if (HWDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-				ffmpeg.av_hwdevice_ctx_create(&_pCodecContext->hw_device_ctx, HWDeviceType, null, null, 0).ThrowExceptionIfError();
-			ffmpeg.avcodec_parameters_to_context(_pCodecContext, _pFormatContext->streams[_streamIndex]->codecpar).ThrowExceptionIfError();
-			ffmpeg.avcodec_open2(_pCodecContext, codec, null).ThrowExceptionIfError();
+	public VideoStreamDecoder(
+		string url,
+		AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE
+	)
+	{
+		_pFormatContext = ffmpeg.avformat_alloc_context();
+		_pReceivedFrame = ffmpeg.av_frame_alloc();
+		var pFormatContext = _pFormatContext;
+		ffmpeg.avformat_open_input(&pFormatContext, url, null, null).ThrowExceptionIfError();
+		ffmpeg.avformat_find_stream_info(_pFormatContext, null).ThrowExceptionIfError();
+		AVCodec* codec = null;
 
-			CodecName = ffmpeg.avcodec_get_name(codec->id);
-			FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
-			PixelFormat = HWDeviceType == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? _pCodecContext->pix_fmt : GetHWPixelFormat(HWDeviceType, codec);
+		_streamIndex = ffmpeg
+			.av_find_best_stream(_pFormatContext, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0)
+			.ThrowExceptionIfError();
+		_pCodecContext = ffmpeg.avcodec_alloc_context3(codec);
+		if (HWDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+			ffmpeg
+				.av_hwdevice_ctx_create(&_pCodecContext->hw_device_ctx, HWDeviceType, null, null, 0)
+				.ThrowExceptionIfError();
+		ffmpeg
+			.avcodec_parameters_to_context(
+				_pCodecContext,
+				_pFormatContext->streams[_streamIndex]->codecpar
+			)
+			.ThrowExceptionIfError();
+		ffmpeg.avcodec_open2(_pCodecContext, codec, null).ThrowExceptionIfError();
 
-			_pPacket = ffmpeg.av_packet_alloc();
-			_pFrame = ffmpeg.av_frame_alloc();
-		}
+		CodecName = ffmpeg.avcodec_get_name(codec->id);
+		FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
+		PixelFormat =
+			HWDeviceType == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE
+				? _pCodecContext->pix_fmt
+				: GetHWPixelFormat(HWDeviceType, codec);
 
-		public string CodecName { get; }
-		public Size FrameSize { get; }
-		public AVPixelFormat PixelFormat { get; }
+		_pPacket = ffmpeg.av_packet_alloc();
+		_pFrame = ffmpeg.av_frame_alloc();
+	}
 
-		protected virtual void Dispose(bool disposing) {
-			ReleaseUnmanaged();
-		}
+	public string CodecName { get; }
+	public Size FrameSize { get; }
+	public AVPixelFormat PixelFormat { get; }
 
-		~VideoStreamDecoder() {
-			Dispose(false);
-		}
+	protected virtual void Dispose(bool disposing)
+	{
+		ReleaseUnmanaged();
+	}
 
-		public void Dispose() {
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
+	~VideoStreamDecoder()
+	{
+		Dispose(false);
+	}
 
-		public void ReleaseUnmanaged() {
-			AVFrame* pFrame = _pFrame;
-			ffmpeg.av_frame_free(&pFrame);
-			AVFrame* pReceivedFrame = _pReceivedFrame;
-			ffmpeg.av_frame_free(&pReceivedFrame);
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
 
-			AVPacket* pPacket = _pPacket;
-			ffmpeg.av_packet_free(&pPacket);
+	public void ReleaseUnmanaged()
+	{
+		AVFrame* pFrame = _pFrame;
+		ffmpeg.av_frame_free(&pFrame);
+		AVFrame* pReceivedFrame = _pReceivedFrame;
+		ffmpeg.av_frame_free(&pReceivedFrame);
 
-			AVCodecContext* pCodecContext = _pCodecContext;
-			ffmpeg.avcodec_free_context(&pCodecContext);
+		AVPacket* pPacket = _pPacket;
+		ffmpeg.av_packet_free(&pPacket);
 
-			AVFormatContext* pFormatContext = _pFormatContext;
-			ffmpeg.avformat_close_input(&pFormatContext);
-		}
+		AVCodecContext* pCodecContext = _pCodecContext;
+		ffmpeg.avcodec_free_context(&pCodecContext);
 
-		public bool TryDecodeFrame(out AVFrame frame, TimeSpan position) {
-			ffmpeg.av_frame_unref(_pFrame);
-			ffmpeg.av_frame_unref(_pReceivedFrame);
-			int error;
+		AVFormatContext* pFormatContext = _pFormatContext;
+		ffmpeg.avformat_close_input(&pFormatContext);
+	}
 
-			AVRational timebase = _pFormatContext->streams[_streamIndex]->time_base;
-			float AV_TIME_BASE = (float)timebase.den / timebase.num;
-			long tc = Convert.ToInt64(position.TotalSeconds * AV_TIME_BASE);
+	public bool TryDecodeFrame(out AVFrame frame, TimeSpan position)
+	{
+		ffmpeg.av_frame_unref(_pFrame);
+		ffmpeg.av_frame_unref(_pReceivedFrame);
+		int error;
 
-			if (ffmpeg.av_seek_frame(_pFormatContext, _streamIndex, tc, ffmpeg.AVSEEK_FLAG_BACKWARD) < 0)
-				ffmpeg.av_seek_frame(_pFormatContext, _streamIndex, tc, ffmpeg.AVSEEK_FLAG_ANY).ThrowExceptionIfError();
-			do {
-				try {
-					do {
-						ffmpeg.av_packet_unref(_pPacket);
-						error = ffmpeg.av_read_frame(_pFormatContext, _pPacket);
+		AVRational timebase = _pFormatContext->streams[_streamIndex]->time_base;
+		float AV_TIME_BASE = (float)timebase.den / timebase.num;
+		long tc = Convert.ToInt64(position.TotalSeconds * AV_TIME_BASE);
 
-						if (error == ffmpeg.AVERROR_EOF) {
-							frame = *_pFrame;
-							return false;
-						}
-
-						error.ThrowExceptionIfError();
-					} while (_pPacket->stream_index != _streamIndex);
-
-					ffmpeg.avcodec_send_packet(_pCodecContext, _pPacket).ThrowExceptionIfError();
-				}
-				finally {
+		if (
+			ffmpeg.av_seek_frame(_pFormatContext, _streamIndex, tc, ffmpeg.AVSEEK_FLAG_BACKWARD) < 0
+		)
+			ffmpeg
+				.av_seek_frame(_pFormatContext, _streamIndex, tc, ffmpeg.AVSEEK_FLAG_ANY)
+				.ThrowExceptionIfError();
+		do
+		{
+			try
+			{
+				do
+				{
 					ffmpeg.av_packet_unref(_pPacket);
-				}
+					error = ffmpeg.av_read_frame(_pFormatContext, _pPacket);
 
-				error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
-			} while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
-
-			error.ThrowExceptionIfError();
-
-			if (_pCodecContext->hw_device_ctx != null) {
-				ffmpeg.av_hwframe_transfer_data(_pReceivedFrame, _pFrame, 0).ThrowExceptionIfError();
-				frame = *_pReceivedFrame;
-			}
-			else
-				frame = *_pFrame;
-
-			return true;
-		}
-
-		private unsafe AVPixelFormat GetHWPixelFormat(AVHWDeviceType hwDevice, AVCodec* codec) {
-			const int AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX = 1;
-			AVPixelFormat pixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
-
-			for (int i = 0; ; i++) {
-				AVCodecHWConfig* hwConfig = ffmpeg.avcodec_get_hw_config(codec, i);
-				if (hwConfig == null) {
-					throw new Exception($"Failed to find compatible pixel format for {hwDevice}");
-				}
-				if ((hwConfig->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) == 0 || hwConfig->device_type != hwDevice) {
-					continue;
-				}
-
-				AVHWFramesConstraints* hwConstraints = ffmpeg.av_hwdevice_get_hwframe_constraints(_pCodecContext->hw_device_ctx, hwConfig);
-				if (hwConstraints != null) {
-					for (AVPixelFormat* p = hwConstraints->valid_sw_formats; *p != AVPixelFormat.AV_PIX_FMT_NONE; p++) {
-						pixelFormat = *p;
-						if (ffmpeg.sws_isSupportedInput(pixelFormat) > 0) {
-							break;
-						}
-						else {
-							pixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
-						}
+					if (error == ffmpeg.AVERROR_EOF)
+					{
+						frame = *_pFrame;
+						return false;
 					}
 
-					ffmpeg.av_hwframe_constraints_free(&hwConstraints);
+					error.ThrowExceptionIfError();
+				} while (_pPacket->stream_index != _streamIndex);
+
+				ffmpeg.avcodec_send_packet(_pCodecContext, _pPacket).ThrowExceptionIfError();
+			}
+			finally
+			{
+				ffmpeg.av_packet_unref(_pPacket);
+			}
+
+			error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+		} while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
+
+		error.ThrowExceptionIfError();
+
+		if (_pCodecContext->hw_device_ctx != null)
+		{
+			ffmpeg.av_hwframe_transfer_data(_pReceivedFrame, _pFrame, 0).ThrowExceptionIfError();
+			frame = *_pReceivedFrame;
+		}
+		else
+			frame = *_pFrame;
+
+		return true;
+	}
+
+	private unsafe AVPixelFormat GetHWPixelFormat(AVHWDeviceType hwDevice, AVCodec* codec)
+	{
+		const int AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX = 1;
+		AVPixelFormat pixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
+
+		for (int i = 0; ; i++)
+		{
+			AVCodecHWConfig* hwConfig = ffmpeg.avcodec_get_hw_config(codec, i);
+			if (hwConfig == null)
+			{
+				throw new Exception($"Failed to find compatible pixel format for {hwDevice}");
+			}
+			if (
+				(hwConfig->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) == 0
+				|| hwConfig->device_type != hwDevice
+			)
+			{
+				continue;
+			}
+
+			AVHWFramesConstraints* hwConstraints = ffmpeg.av_hwdevice_get_hwframe_constraints(
+				_pCodecContext->hw_device_ctx,
+				hwConfig
+			);
+			if (hwConstraints != null)
+			{
+				for (
+					AVPixelFormat* p = hwConstraints->valid_sw_formats;
+					*p != AVPixelFormat.AV_PIX_FMT_NONE;
+					p++
+				)
+				{
+					pixelFormat = *p;
+					if (ffmpeg.sws_isSupportedInput(pixelFormat) > 0)
+					{
+						break;
+					}
+					else
+					{
+						pixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
+					}
 				}
 
-				if (pixelFormat != AVPixelFormat.AV_PIX_FMT_NONE) {
-					return pixelFormat;
-				}
+				ffmpeg.av_hwframe_constraints_free(&hwConstraints);
+			}
+
+			if (pixelFormat != AVPixelFormat.AV_PIX_FMT_NONE)
+			{
+				return pixelFormat;
 			}
 		}
 	}

@@ -20,38 +20,57 @@ using Avalonia.Markup.Xaml;
 using VDF.GUI.Data;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Views {
-	public class ThumbnailComparer : Window {
-		//Designer need this
-		public ThumbnailComparer() => InitializeComponent();
-		public ThumbnailComparer(List<LargeThumbnailDuplicateItem> duplicateItemVMs) {
-			DataContext = new ThumbnailComparerVM(duplicateItemVMs);
-			InitializeComponent();
-			this.Loaded += ThumbnailComparer_Loaded;
+namespace VDF.GUI.Views;
 
-			if (SettingsFile.Instance.UseMica &&
-				RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-				Environment.OSVersion.Version.Build >= 22000) {
-				Background = null;
-				TransparencyLevelHint = new List<WindowTransparencyLevel> { WindowTransparencyLevel.Mica };
-				ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.PreferSystemChrome;
-				if (SettingsFile.Instance.DarkMode)
-					this.FindControl<ExperimentalAcrylicBorder>("ExperimentalAcrylicBorderBackgroundBlack")!.IsVisible = true;
-				else
-					this.FindControl<ExperimentalAcrylicBorder>("ExperimentalAcrylicBorderBackgroundWhite")!.IsVisible = true;
-			}
+public class ThumbnailComparer : Window
+{
+	//Designer need this
+	public ThumbnailComparer() => InitializeComponent();
 
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-				this.FindControl<TextBlock>("TextBlockWindowTitle")!.IsVisible = false;
-			}
-			if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
-				RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+	public ThumbnailComparer(List<LargeThumbnailDuplicateItem> duplicateItemVMs)
+	{
+		DataContext = new ThumbnailComparerVM(duplicateItemVMs);
+		InitializeComponent();
+		Loaded += ThumbnailComparer_Loaded;
+
+		if (
+			SettingsFile.Instance.UseMica
+			&& RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			&& Environment.OSVersion.Version.Build >= 22000
+		)
+		{
+			Background = null;
+			TransparencyLevelHint = new List<WindowTransparencyLevel>
+			{
+				WindowTransparencyLevel.Mica,
+			};
+			ExtendClientAreaChromeHints = Avalonia
+				.Platform
+				.ExtendClientAreaChromeHints
+				.PreferSystemChrome;
+			if (SettingsFile.Instance.DarkMode)
+				this.FindControl<ExperimentalAcrylicBorder>(
+					"ExperimentalAcrylicBorderBackgroundBlack"
+				)!.IsVisible = true;
+			else
+				this.FindControl<ExperimentalAcrylicBorder>(
+					"ExperimentalAcrylicBorderBackgroundWhite"
+				)!.IsVisible = true;
 		}
-		void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-		private void ThumbnailComparer_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
-			if (DataContext != null)
-				((ThumbnailComparerVM)DataContext).LoadThumbnails();
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+		{
+			this.FindControl<TextBlock>("TextBlockWindowTitle")!.IsVisible = false;
 		}
+		if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
+			RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+	}
+
+	void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
+	private void ThumbnailComparer_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+	{
+		if (DataContext != null)
+			((ThumbnailComparerVM)DataContext).LoadThumbnails();
 	}
 }

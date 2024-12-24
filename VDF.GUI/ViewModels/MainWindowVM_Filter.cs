@@ -19,132 +19,185 @@ using Avalonia.Collections;
 using ReactiveUI;
 using VDF.GUI.Data;
 
-namespace VDF.GUI.ViewModels {
-	public partial class MainWindowVM : ReactiveObject {
+namespace VDF.GUI.ViewModels;
 
-		DataGridCollectionView? view;
-		public KeyValuePair<string, DataGridSortDescription>[] SortOrders { get; private set; }
-		public sealed class CheckedGroupsComparer : System.Collections.IComparer {
-			readonly MainWindowVM mainVM;
-			public CheckedGroupsComparer(MainWindowVM vm) => mainVM = vm;
-			public int Compare(object? x, object? y) {
-				if (x == null || y == null)
-					return -1;
-				var dupX = (DuplicateItemVM)x;
-				var dupY = (DuplicateItemVM)y;
-				bool xHasChecked = mainVM.Duplicates.Where(a => a.ItemInfo.GroupId == dupX.ItemInfo.GroupId).Where(a => a.Checked).Any();
-				bool yHasChecked = dupY.ItemInfo.GroupId == dupX.ItemInfo.GroupId ?
-					xHasChecked :
-					mainVM.Duplicates.Where(a => a.ItemInfo.GroupId == dupY.ItemInfo.GroupId).Where(a => a.Checked).Any();
-				return xHasChecked.CompareTo(yHasChecked);
-			}
+public partial class MainWindowVM : ReactiveObject
+{
+	DataGridCollectionView? view;
+	public KeyValuePair<string, DataGridSortDescription>[] SortOrders { get; private set; }
+
+	public sealed class CheckedGroupsComparer : System.Collections.IComparer
+	{
+		readonly MainWindowVM mainVM;
+
+		public CheckedGroupsComparer(MainWindowVM vm) => mainVM = vm;
+
+		public int Compare(object? x, object? y)
+		{
+			if (x == null || y == null)
+				return -1;
+			var dupX = (DuplicateItemVM)x;
+			var dupY = (DuplicateItemVM)y;
+			bool xHasChecked = mainVM
+				.Duplicates.Where(a => a.ItemInfo.GroupId == dupX.ItemInfo.GroupId)
+				.Where(a => a.Checked)
+				.Any();
+			bool yHasChecked =
+				dupY.ItemInfo.GroupId == dupX.ItemInfo.GroupId
+					? xHasChecked
+					: mainVM
+						.Duplicates.Where(a => a.ItemInfo.GroupId == dupY.ItemInfo.GroupId)
+						.Where(a => a.Checked)
+						.Any();
+			return xHasChecked.CompareTo(yHasChecked);
 		}
-		public sealed class GroupSizeComparer : System.Collections.IComparer {
-			readonly MainWindowVM mainVM;
-			private readonly Dictionary<Guid, int> guidMap = new();
-			public GroupSizeComparer(MainWindowVM vm) => mainVM = vm;
-			public int Compare(object? x, object? y) {
-				if (x == null || y == null)
-					return -1;
-				var dupX = (DuplicateItemVM)x;
-				var dupY = (DuplicateItemVM)y;
-				int groupSizeX, groupSizeY;
-				if (guidMap.ContainsKey(dupX.ItemInfo.GroupId)) {
-					groupSizeX = guidMap[dupX.ItemInfo.GroupId];
-				}
-				else {
-					groupSizeX = mainVM.Duplicates.Where(a => a.ItemInfo.GroupId == dupX.ItemInfo.GroupId).Count();
-					guidMap[dupX.ItemInfo.GroupId] = groupSizeX;
-				}
-				if (guidMap.ContainsKey(dupY.ItemInfo.GroupId)) {
-					groupSizeY = guidMap[dupY.ItemInfo.GroupId];
-				}
-				else {
-					groupSizeY = mainVM.Duplicates.Where(a => a.ItemInfo.GroupId == dupY.ItemInfo.GroupId).Count();
-					guidMap[dupY.ItemInfo.GroupId] = groupSizeY;
-				}
-				return groupSizeX.CompareTo(groupSizeY);
+	}
+
+	public sealed class GroupSizeComparer : System.Collections.IComparer
+	{
+		readonly MainWindowVM mainVM;
+		private readonly Dictionary<Guid, int> guidMap = new();
+
+		public GroupSizeComparer(MainWindowVM vm) => mainVM = vm;
+
+		public int Compare(object? x, object? y)
+		{
+			if (x == null || y == null)
+				return -1;
+			var dupX = (DuplicateItemVM)x;
+			var dupY = (DuplicateItemVM)y;
+			int groupSizeX,
+				groupSizeY;
+			if (guidMap.ContainsKey(dupX.ItemInfo.GroupId))
+			{
+				groupSizeX = guidMap[dupX.ItemInfo.GroupId];
 			}
+			else
+			{
+				groupSizeX = mainVM
+					.Duplicates.Where(a => a.ItemInfo.GroupId == dupX.ItemInfo.GroupId)
+					.Count();
+				guidMap[dupX.ItemInfo.GroupId] = groupSizeX;
+			}
+			if (guidMap.ContainsKey(dupY.ItemInfo.GroupId))
+			{
+				groupSizeY = guidMap[dupY.ItemInfo.GroupId];
+			}
+			else
+			{
+				groupSizeY = mainVM
+					.Duplicates.Where(a => a.ItemInfo.GroupId == dupY.ItemInfo.GroupId)
+					.Count();
+				guidMap[dupY.ItemInfo.GroupId] = groupSizeY;
+			}
+			return groupSizeX.CompareTo(groupSizeY);
 		}
-		public KeyValuePair<string, FileTypeFilter>[] TypeFilters { get; } = {
-			new KeyValuePair<string, FileTypeFilter>("All",  FileTypeFilter.All),
-			new KeyValuePair<string, FileTypeFilter>("Videos",  FileTypeFilter.Videos),
-			new KeyValuePair<string, FileTypeFilter>("Images",  FileTypeFilter.Images),
+	}
+
+	public KeyValuePair<string, FileTypeFilter>[] TypeFilters { get; } =
+		{
+			new KeyValuePair<string, FileTypeFilter>("All", FileTypeFilter.All),
+			new KeyValuePair<string, FileTypeFilter>("Videos", FileTypeFilter.Videos),
+			new KeyValuePair<string, FileTypeFilter>("Images", FileTypeFilter.Images),
 		};
 
-		KeyValuePair<string, FileTypeFilter> _FileType;
+	KeyValuePair<string, FileTypeFilter> _FileType;
 
-		public KeyValuePair<string, FileTypeFilter> FileType {
-			get => _FileType;
-			set {
-				if (value.Key == _FileType.Key) return;
-				_FileType = value;
-				this.RaisePropertyChanged(nameof(FileType));
-				view?.Refresh();
-			}
+	public KeyValuePair<string, FileTypeFilter> FileType
+	{
+		get => _FileType;
+		set
+		{
+			if (value.Key == _FileType.Key)
+				return;
+			_FileType = value;
+			this.RaisePropertyChanged(nameof(FileType));
+			view?.Refresh();
 		}
-		KeyValuePair<string, DataGridSortDescription> _SortOrder;
+	}
+	KeyValuePair<string, DataGridSortDescription> _SortOrder;
 
-		public KeyValuePair<string, DataGridSortDescription> SortOrder {
-			get => _SortOrder;
-			set {
-				if (value.Key == _SortOrder.Key) return;
-				_SortOrder = value;
-				this.RaisePropertyChanged(nameof(SortOrder));
-				view?.SortDescriptions.Clear();
-				if (_SortOrder.Value != null)
-					view?.SortDescriptions.Add(_SortOrder.Value);
-				view?.Refresh();
-			}
+	public KeyValuePair<string, DataGridSortDescription> SortOrder
+	{
+		get => _SortOrder;
+		set
+		{
+			if (value.Key == _SortOrder.Key)
+				return;
+			_SortOrder = value;
+			this.RaisePropertyChanged(nameof(SortOrder));
+			view?.SortDescriptions.Clear();
+			if (_SortOrder.Value != null)
+				view?.SortDescriptions.Add(_SortOrder.Value);
+			view?.Refresh();
 		}
-		string _FilterByPath = string.Empty;
+	}
+	string _FilterByPath = string.Empty;
 
-		public string FilterByPath {
-			get => _FilterByPath;
-			set {
-				if (value == _FilterByPath) return;
-				_FilterByPath = value;
-				this.RaisePropertyChanged(nameof(FilterByPath));
-				view?.Refresh();
-			}
+	public string FilterByPath
+	{
+		get => _FilterByPath;
+		set
+		{
+			if (value == _FilterByPath)
+				return;
+			_FilterByPath = value;
+			this.RaisePropertyChanged(nameof(FilterByPath));
+			view?.Refresh();
 		}
-		int _FilterSimilarityFrom = 0;
-		public int FilterSimilarityFrom {
-			get => _FilterSimilarityFrom;
-			set {
-				if (value == _FilterSimilarityFrom) return;
-				this.RaiseAndSetIfChanged(ref _FilterSimilarityFrom, value);
-				view?.Refresh();
-			}
+	}
+	int _FilterSimilarityFrom = 0;
+	public int FilterSimilarityFrom
+	{
+		get => _FilterSimilarityFrom;
+		set
+		{
+			if (value == _FilterSimilarityFrom)
+				return;
+			this.RaiseAndSetIfChanged(ref _FilterSimilarityFrom, value);
+			view?.Refresh();
 		}
-		int _FilterSimilarityTo = 100;
-		public int FilterSimilarityTo {
-			get => _FilterSimilarityTo;
-			set {
-				if (value == _FilterSimilarityTo) return;
-				this.RaiseAndSetIfChanged(ref _FilterSimilarityTo, value);
-				view?.Refresh();
-			}
+	}
+	int _FilterSimilarityTo = 100;
+	public int FilterSimilarityTo
+	{
+		get => _FilterSimilarityTo;
+		set
+		{
+			if (value == _FilterSimilarityTo)
+				return;
+			this.RaiseAndSetIfChanged(ref _FilterSimilarityTo, value);
+			view?.Refresh();
 		}
+	}
 
-		bool DuplicatesFilter(object obj) {
-			if (obj is not DuplicateItemVM data) return false;
-			var success = true;
-			if (!string.IsNullOrEmpty(FilterByPath)) {
-				success = data.ItemInfo.Path.Contains(FilterByPath, StringComparison.OrdinalIgnoreCase);
-				//see if a group member matches, then this should be considered as match too
-				if (!success)
-					success = Duplicates.Any(s =>
-						s.ItemInfo.GroupId == data.ItemInfo.GroupId &&
-						s.ItemInfo.Path.Contains(FilterByPath, StringComparison.OrdinalIgnoreCase));
-			}
-			if (success && FileType.Value != FileTypeFilter.All)
-				success = FileType.Value == FileTypeFilter.Images ? data.ItemInfo.IsImage : !data.ItemInfo.IsImage;
-			if (success) {
-				success = data.ItemInfo.Similarity >= FilterSimilarityFrom && data.ItemInfo.Similarity <= FilterSimilarityTo;
-			}
-			data.IsVisibleInFilter = success;
-			return success;
+	bool DuplicatesFilter(object obj)
+	{
+		if (obj is not DuplicateItemVM data)
+			return false;
+		var success = true;
+		if (!string.IsNullOrEmpty(FilterByPath))
+		{
+			success = data.ItemInfo.Path.Contains(FilterByPath, StringComparison.OrdinalIgnoreCase);
+			//see if a group member matches, then this should be considered as match too
+			if (!success)
+				success = Duplicates.Any(s =>
+					s.ItemInfo.GroupId == data.ItemInfo.GroupId
+					&& s.ItemInfo.Path.Contains(FilterByPath, StringComparison.OrdinalIgnoreCase)
+				);
 		}
+		if (success && FileType.Value != FileTypeFilter.All)
+			success =
+				FileType.Value == FileTypeFilter.Images
+					? data.ItemInfo.IsImage
+					: !data.ItemInfo.IsImage;
+		if (success)
+		{
+			success =
+				data.ItemInfo.Similarity >= FilterSimilarityFrom
+				&& data.ItemInfo.Similarity <= FilterSimilarityTo;
+		}
+		data.IsVisibleInFilter = success;
+		return success;
 	}
 }

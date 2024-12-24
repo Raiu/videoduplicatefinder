@@ -15,44 +15,45 @@
 //
 
 
-namespace VDF.Core {
-	public sealed class Settings {
-		public HashSet<string> IncludeList { get; } = new HashSet<string>();
-		public HashSet<string> BlackList { get; } = new HashSet<string>();
+namespace VDF.Core;
 
-		public bool IgnoreReadOnlyFolders;
-		public bool IgnoreReparsePoints;
-		public bool ExcludeHardLinks;
-		public bool GeneratePreviewThumbnails;
-		public bool UseNativeFfmpegBinding;
-		public bool IncludeSubDirectories = true;
-		public bool IncludeImages = true;
-		public bool ExtendedFFToolsLogging;
-		public bool AlwaysRetryFailedSampling;
-		public bool IgnoreBlackPixels;
-		public bool IgnoreWhitePixels;
-		public bool CompareHorizontallyFlipped;
-		public bool IncludeNonExistingFiles = true;
-		public bool ScanAgainstEntireDatabase;
+public sealed class Settings
+{
+	public HashSet<string> IncludeList { get; } = new HashSet<string>();
+	public HashSet<string> BlackList { get; } = new HashSet<string>();
 
-		public FFTools.FFHardwareAccelerationMode HardwareAccelerationMode;
+	public bool IgnoreReadOnlyFolders;
+	public bool IgnoreReparsePoints;
+	public bool ExcludeHardLinks;
+	public bool GeneratePreviewThumbnails;
+	public bool UseNativeFfmpegBinding;
+	public bool IncludeSubDirectories = true;
+	public bool IncludeImages = true;
+	public bool ExtendedFFToolsLogging;
+	public bool AlwaysRetryFailedSampling;
+	public bool IgnoreBlackPixels;
+	public bool IgnoreWhitePixels;
+	public bool CompareHorizontallyFlipped;
+	public bool IncludeNonExistingFiles = true;
+	public bool ScanAgainstEntireDatabase;
 
-		public byte Threshhold = 5;
-		public float Percent = 96f;
-		public double PercentDurationDifference = 20d;
+	public FFTools.FFHardwareAccelerationMode HardwareAccelerationMode;
 
-		public int ThumbnailCount = 1;
-		public int MaxDegreeOfParallelism = 1;
+	public byte Threshhold = 5;
+	public float Percent = 96f;
+	public double PercentDurationDifference = 20d;
 
-		public string CustomFFArguments = string.Empty;
-		public string CustomDatabaseFolder = string.Empty;
+	public int ThumbnailCount = 1;
+	public int MaxDegreeOfParallelism = 1;
 
-		public bool FilterByFilePathContains;
-		public List<string> FilePathContainsTexts = new();
-		public bool FilterByFilePathNotContains;
-		public List<string> FilePathNotContainsTexts = new();
-		public bool FilterByFileSize;
-		public int MaximumFileSize;
-		public int MinimumFileSize;
-	}
+	public string CustomFFArguments = string.Empty;
+	public string CustomDatabaseFolder = string.Empty;
+
+	public bool FilterByFilePathContains;
+	public List<string> FilePathContainsTexts = new();
+	public bool FilterByFilePathNotContains;
+	public List<string> FilePathNotContainsTexts = new();
+	public bool FilterByFileSize;
+	public int MaximumFileSize;
+	public int MinimumFileSize;
 }

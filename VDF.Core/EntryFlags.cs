@@ -14,29 +14,35 @@
 // */
 //
 
-using System;
 using System.Runtime.CompilerServices;
 
-namespace VDF.Core {
-	[Flags]
-	public enum EntryFlags {
-		IsImage = 1,
-		ManuallyExcluded = 2,
-		ThumbnailError = 4,
-		MetadataError = 8,
-		TooDark = 16,
+namespace VDF.Core;
 
-		AllErrors = ThumbnailError | MetadataError | TooDark
-	}
+[Flags]
+public enum EntryFlags
+{
+	IsImage = 1,
+	ManuallyExcluded = 2,
+	ThumbnailError = 4,
+	MetadataError = 8,
+	TooDark = 16,
 
-	public static class EntryFlagExtensions {
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool Any(this EntryFlags f, EntryFlags checkFlags) => (f & checkFlags) > 0;
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool Has(this EntryFlags f, EntryFlags checkFlags) => (f & checkFlags) == checkFlags;
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void Set(this ref EntryFlags f, EntryFlags setFlag) => f |= setFlag;
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void Set(this ref EntryFlags f, EntryFlags setFlag, bool falseToReset) => f = (f & ~setFlag) | (falseToReset ? setFlag : 0);
-	}
+	AllErrors = ThumbnailError | MetadataError | TooDark,
+}
+
+public static class EntryFlagExtensions
+{
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool Any(this EntryFlags f, EntryFlags checkFlags) => (f & checkFlags) > 0;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool Has(this EntryFlags f, EntryFlags checkFlags) =>
+		(f & checkFlags) == checkFlags;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void Set(this ref EntryFlags f, EntryFlags setFlag) => f |= setFlag;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void Set(this ref EntryFlags f, EntryFlags setFlag, bool falseToReset) =>
+		f = (f & ~setFlag) | (falseToReset ? setFlag : 0);
 }

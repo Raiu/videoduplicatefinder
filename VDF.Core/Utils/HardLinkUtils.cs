@@ -18,47 +18,79 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace VDF.Core.Utils {
+namespace VDF.Core.Utils;
+
+/// <summary>
+/// Credits to David-Maisonave for his original windows implementation
+/// </summary>
+internal static partial class HardLinkUtils
+{
+	[LibraryImport(
+		"kernel32.dll",
+		SetLastError = true,
+		StringMarshalling = StringMarshalling.Utf16
+	)]
+	private static partial IntPtr FindFirstFileNameW(
+		string lpFileName,
+		uint dwFlags,
+		ref int StringLength,
+		char[] LinkName
+	);
+
+	[LibraryImport(
+		"kernel32.dll",
+		SetLastError = true,
+		StringMarshalling = StringMarshalling.Utf16
+	)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static partial bool FindNextFileNameW(
+		IntPtr hFindStream,
+		ref int StringLength,
+		char[] LinkName
+	);
+
+	[LibraryImport("kernel32.dll", SetLastError = true)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static partial bool FindClose(IntPtr hFindFile);
+
+	[LibraryImport(
+		"kernel32.dll",
+		SetLastError = true,
+		StringMarshalling = StringMarshalling.Utf16
+	)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static partial bool GetVolumePathNameW(
+		string lpszFileName,
+		[Out] char[] lpszVolumePathName,
+		int cchBufferLength
+	);
+
+	const IntPtr INVALID_HANDLE_VALUE = -1;
+	const int ERROR_MORE_DATA = 234;
+
 	/// <summary>
-	/// Credits to David-Maisonave for his original windows implementation
+	//// Returns enumeration of hard links for the given *file* as full file paths
 	/// </summary>
-	internal static partial class HardLinkUtils {
-		[LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-		private static partial IntPtr FindFirstFileNameW(string lpFileName, uint dwFlags, ref int StringLength, char[] LinkName);
+	public static IEnumerable<string> GetHardLinks(string filepath)
+	{
+		if (CoreUtils.IsWindows)
+			return GetHardLinksWindows(filepath);
+		else
+			return GetHardLinksPosix(filepath);
+	}
 
-		[LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		private static partial bool FindNextFileNameW(IntPtr hFindStream, ref int StringLength, char[] LinkName);
+	static IEnumerable<string> GetHardLinksPosix(string filepath)
+	{
+		const int timeout = 30_000;
+		int success = Mono.Unix.Native.Syscall.stat(filepath, out var stat);
+		if (success == 0 && stat.st_nlink <= 1)
+			return Array.Empty<string>();
 
-		[LibraryImport("kernel32.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		private static partial bool FindClose(IntPtr hFindFile);
-
-		[LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		private static partial bool GetVolumePathNameW(string lpszFileName, [Out] char[] lpszVolumePathName, int cchBufferLength);
-
-		const IntPtr INVALID_HANDLE_VALUE = -1;
-		const int ERROR_MORE_DATA = 234;
-
-		/// <summary>
-		//// Returns enumeration of hard links for the given *file* as full file paths
-		/// </summary>
-		public static IEnumerable<string> GetHardLinks(string filepath) {
-			if (CoreUtils.IsWindows)
-				return GetHardLinksWindows(filepath);
-			else
-				return GetHardLinksPosix(filepath);
-		}
-
-		static IEnumerable<string> GetHardLinksPosix(string filepath) {
-			const int timeout = 30_000;
-			int success = Mono.Unix.Native.Syscall.stat(filepath, out var stat);
-			if (success == 0 && stat.st_nlink <= 1)
-				return Array.Empty<string>();
-
-			Process process = new() {
-				StartInfo = {
+		Process process =
+			new()
+			{
+				StartInfo =
+				{
 					FileName = "find",
 					Arguments = $" {Path.GetPathRoot(filepath)} -samefile \"{filepath}\"",
 					RedirectStandardOutput = true,
@@ -67,80 +99,98 @@ namespace VDF.Core.Utils {
 					 * much longer due to all the 'Permission denied' errors
 					 */
 					WindowStyle = ProcessWindowStyle.Hidden,
-					UseShellExecute = false
-				}
+					UseShellExecute = false,
+				},
 			};
-			try {
-				process.Start();
-				process.WaitForExit(timeout);
-				if (!process.HasExited) {
-					process.Kill();
-					throw new TimeoutException("timed out");
-				}
-				List<string> files = new(process.StandardOutput.ReadToEnd().Split(Environment.NewLine));
-				return files;
+		try
+		{
+			process.Start();
+			process.WaitForExit(timeout);
+			if (!process.HasExited)
+			{
+				process.Kill();
+				throw new TimeoutException("timed out");
 			}
-			catch (Exception ex) {
-				Logger.Instance.Info($"Failed getting hard links of file: {filepath}, reason: {ex.Message}");
-				return Array.Empty<string>();
-			}
+			List<string> files = new(process.StandardOutput.ReadToEnd().Split(Environment.NewLine));
+			return files;
 		}
+		catch (Exception ex)
+		{
+			Logger.Instance.Info(
+				$"Failed getting hard links of file: {filepath}, reason: {ex.Message}"
+			);
+			return Array.Empty<string>();
+		}
+	}
 
-		static IEnumerable<string> GetHardLinksWindows(string filepath) {
-			char[] buffer = ArrayPool<char>.Shared.Rent(512);
-			try {
-				int stringLength = buffer.Length;
+	static IEnumerable<string> GetHardLinksWindows(string filepath)
+	{
+		char[] buffer = ArrayPool<char>.Shared.Rent(512);
+		try
+		{
+			int stringLength = buffer.Length;
+			buffer.AsSpan().Clear();
+
+			if (!GetVolumePathNameW(filepath, buffer, stringLength))
+				return Array.Empty<string>();
+
+			Span<char> volume = buffer.AsSpan().TrimEnd('\0').TrimEnd('\\');
+			List<string> links = new();
+
+			while (true)
+			{
 				buffer.AsSpan().Clear();
-
-				if (!GetVolumePathNameW(filepath, buffer, stringLength))
-					return Array.Empty<string>();
-
-				Span<char> volume = buffer.AsSpan().TrimEnd('\0').TrimEnd('\\');
-				List<string> links = new();
-
-				while (true) {
+				IntPtr findHandle = FindFirstFileNameW(filepath, 0, ref stringLength, buffer);
+				if (findHandle == INVALID_HANDLE_VALUE)
+				{
+					if (Marshal.GetLastPInvokeError() == ERROR_MORE_DATA)
+					{
+						ArrayPool<char>.Shared.Return(buffer);
+						buffer = ArrayPool<char>.Shared.Rent(stringLength);
+						continue;
+					}
+					else
+					{
+						break;
+					}
+				}
+				links.Add(string.Concat(volume, buffer.AsSpan().TrimEnd('\0')));
+				while (true)
+				{
 					buffer.AsSpan().Clear();
-					IntPtr findHandle = FindFirstFileNameW(filepath, 0, ref stringLength, buffer);
-					if (findHandle == INVALID_HANDLE_VALUE) {
-						if (Marshal.GetLastPInvokeError() == ERROR_MORE_DATA) {
+					bool success = FindNextFileNameW(findHandle, ref stringLength, buffer);
+
+					if (!success)
+					{
+						if (Marshal.GetLastPInvokeError() == ERROR_MORE_DATA)
+						{
 							ArrayPool<char>.Shared.Return(buffer);
 							buffer = ArrayPool<char>.Shared.Rent(stringLength);
 							continue;
 						}
-						else {
+						else
+						{
+							FindClose(findHandle);
 							break;
 						}
 					}
 					links.Add(string.Concat(volume, buffer.AsSpan().TrimEnd('\0')));
-					while (true) {
-						buffer.AsSpan().Clear();
-						bool success = FindNextFileNameW(findHandle, ref stringLength, buffer);
-
-						if (!success) {
-							if (Marshal.GetLastPInvokeError() == ERROR_MORE_DATA) {
-								ArrayPool<char>.Shared.Return(buffer);
-								buffer = ArrayPool<char>.Shared.Rent(stringLength);
-								continue;
-							}
-							else {
-								FindClose(findHandle);
-								break;
-							}
-						}
-						links.Add(string.Concat(volume, buffer.AsSpan().TrimEnd('\0')));
-					}
-					break;
 				}
+				break;
+			}
 
-				return links;
-			}
-			catch (Exception ex) {
-				Logger.Instance.Info($"Failed getting hard links of file: {filepath}, reason: {ex.Message}");
-				return Array.Empty<string>();
-			}
-			finally {
-				ArrayPool<char>.Shared.Return(buffer);
-			}
+			return links;
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance.Info(
+				$"Failed getting hard links of file: {filepath}, reason: {ex.Message}"
+			);
+			return Array.Empty<string>();
+		}
+		finally
+		{
+			ArrayPool<char>.Shared.Return(buffer);
 		}
 	}
 }

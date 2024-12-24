@@ -18,141 +18,185 @@ using System.Diagnostics;
 using System.Text.Json;
 using ProtoBuf;
 
-namespace VDF.Core.Utils {
-	static class DatabaseUtils {
-		internal static HashSet<FileEntry> Database = new();
-		internal static string? CustomDatabaseFolder;
+namespace VDF.Core.Utils;
 
-		static string CurrentDatabasePath => Directory.Exists(CustomDatabaseFolder)
-					? FileUtils.SafePathCombine(CustomDatabaseFolder,
-					"ScannedFiles.db")
-					: FileUtils.SafePathCombine(CoreUtils.CurrentFolder,
-					"ScannedFiles.db");
-		static string TempDatabasePath => Directory.Exists(CustomDatabaseFolder)
-					? FileUtils.SafePathCombine(CustomDatabaseFolder,
-					"ScannedFiles_new.db")
-					: FileUtils.SafePathCombine(CoreUtils.CurrentFolder,
-					"ScannedFiles_new.db");
+static class DatabaseUtils
+{
+	internal static HashSet<FileEntry> Database = new();
+	internal static string? CustomDatabaseFolder;
 
-		internal static bool LoadDatabase() {
-			FileInfo databaseFile = new(TempDatabasePath);
-			if (!databaseFile.Exists)
-				databaseFile = new(CurrentDatabasePath);
+	static string CurrentDatabasePath =>
+		Directory.Exists(CustomDatabaseFolder)
+			? FileUtils.SafePathCombine(CustomDatabaseFolder, "ScannedFiles.db")
+			: FileUtils.SafePathCombine(CoreUtils.CurrentFolder, "ScannedFiles.db");
+	static string TempDatabasePath =>
+		Directory.Exists(CustomDatabaseFolder)
+			? FileUtils.SafePathCombine(CustomDatabaseFolder, "ScannedFiles_new.db")
+			: FileUtils.SafePathCombine(CoreUtils.CurrentFolder, "ScannedFiles_new.db");
 
-			if (databaseFile.Exists && databaseFile.Length == 0) //invalid data
+	internal static bool LoadDatabase()
+	{
+		FileInfo databaseFile = new(TempDatabasePath);
+		if (!databaseFile.Exists)
+			databaseFile = new(CurrentDatabasePath);
+
+		if (databaseFile.Exists && databaseFile.Length == 0) //invalid data
+		{
+			databaseFile.Delete();
+			return true;
+		}
+		if (!databaseFile.Exists)
+			return true;
+
+		Logger.Instance.Info("Found previously scanned files, importing...");
+		var st = Stopwatch.StartNew();
+		try
+		{
+			using var file = new FileStream(databaseFile.FullName, FileMode.Open);
+			Database = Serializer.Deserialize<HashSet<FileEntry>>(file);
+		}
+		catch (ProtoException)
+		{
+			//This could be an older database
+			try
 			{
-				databaseFile.Delete();
-				return true;
-			}
-			if (!databaseFile.Exists)
-				return true;
-
-			Logger.Instance.Info("Found previously scanned files, importing...");
-			var st = Stopwatch.StartNew();
-			try {
 				using var file = new FileStream(databaseFile.FullName, FileMode.Open);
-				Database = Serializer.Deserialize<HashSet<FileEntry>>(file);
-			}
-			catch (ProtoException) {
-				//This could be an older database
-				try {
-					using var file = new FileStream(databaseFile.FullName, FileMode.Open);
-					var oldDatabase = Serializer.Deserialize<List<FileEntry_old>>(file);
-					Database = new();
-					foreach (var item in oldDatabase) {
-						Database.Add(new FileEntry(item.Path) {
+				var oldDatabase = Serializer.Deserialize<List<FileEntry_old>>(file);
+				Database = new();
+				foreach (var item in oldDatabase)
+				{
+					Database.Add(
+						new FileEntry(item.Path)
+						{
 							Flags = item.Flags,
 							mediaInfo = item.mediaInfo,
-							grayBytes = new()
-						});
-					}
-				}
-				catch (ProtoException ex) {
-					Logger.Instance.Info($"Importing previously scanned files has failed because of: {ex}");
-					st.Stop();
-					try {
-						File.Move(databaseFile.FullName, Path.ChangeExtension(databaseFile.FullName, "_DAMAGED.db"), true);
-					}
-					catch (Exception) { }
-					return false;
+							grayBytes = new(),
+						}
+					);
 				}
 			}
-			catch (EndOfStreamException) {
-				Logger.Instance.Info($"Importing previously scanned files from '{databaseFile.FullName}' has failed.");
-				databaseFile.Delete();
-				//Could have been the temp database file
-				LoadDatabase();
+			catch (ProtoException ex)
+			{
+				Logger.Instance.Info(
+					$"Importing previously scanned files has failed because of: {ex}"
+				);
+				st.Stop();
+				try
+				{
+					File.Move(
+						databaseFile.FullName,
+						Path.ChangeExtension(databaseFile.FullName, "_DAMAGED.db"),
+						true
+					);
+				}
+				catch (Exception) { }
+				return false;
 			}
-
-			st.Stop();
-			Logger.Instance.Info($"Previously scanned files imported. {Database.Count:N0} files in {st.Elapsed}");
-			return true;
 		}
-		internal static void CleanupDatabase() {
-			int oldCount = Database.Count;
-			var st = Stopwatch.StartNew();
-
-			Database.RemoveWhere(a => !File.Exists(a.Path) || a.Flags.Any(EntryFlags.MetadataError | EntryFlags.ThumbnailError));
-
-			st.Stop();
+		catch (EndOfStreamException)
+		{
 			Logger.Instance.Info(
-				$"Database cleanup has finished in: {st.Elapsed}, {oldCount - Database.Count} entries have been removed");
-			SaveDatabase();
+				$"Importing previously scanned files from '{databaseFile.FullName}' has failed."
+			);
+			databaseFile.Delete();
+			//Could have been the temp database file
+			LoadDatabase();
 		}
-		internal static void SaveDatabase() {
-			Logger.Instance.Info($"Save scanned files to disk ({Database.Count:N0} files).");
 
-			FileStream stream = new(TempDatabasePath, FileMode.Create);
-			Serializer.Serialize(stream, Database);
-			stream.Dispose();
-			//Reason: https://github.com/0x90d/videoduplicatefinder/issues/247
-			File.Move(TempDatabasePath, CurrentDatabasePath, true);
+		st.Stop();
+		Logger.Instance.Info(
+			$"Previously scanned files imported. {Database.Count:N0} files in {st.Elapsed}"
+		);
+		return true;
+	}
+
+	internal static void CleanupDatabase()
+	{
+		int oldCount = Database.Count;
+		var st = Stopwatch.StartNew();
+
+		Database.RemoveWhere(a =>
+			!File.Exists(a.Path)
+			|| a.Flags.Any(EntryFlags.MetadataError | EntryFlags.ThumbnailError)
+		);
+
+		st.Stop();
+		Logger.Instance.Info(
+			$"Database cleanup has finished in: {st.Elapsed}, {oldCount - Database.Count} entries have been removed"
+		);
+		SaveDatabase();
+	}
+
+	internal static void SaveDatabase()
+	{
+		Logger.Instance.Info($"Save scanned files to disk ({Database.Count:N0} files).");
+
+		FileStream stream = new(TempDatabasePath, FileMode.Create);
+		Serializer.Serialize(stream, Database);
+		stream.Dispose();
+		//Reason: https://github.com/0x90d/videoduplicatefinder/issues/247
+		File.Move(TempDatabasePath, CurrentDatabasePath, true);
+	}
+
+	internal static void ClearDatabase()
+	{
+		Database.Clear();
+		SaveDatabase();
+	}
+
+	internal static void BlacklistFileEntry(string filePath)
+	{
+		if (!Database.TryGetValue(new FileEntry(filePath), out FileEntry? actualValue))
+			return;
+		actualValue.Flags.Set(EntryFlags.ManuallyExcluded);
+	}
+
+	internal static void UpdateFilePath(string newPath, FileEntry dbEntry)
+	{
+		Database.Remove(dbEntry);
+		dbEntry.Path = newPath;
+		Database.Add(dbEntry);
+	}
+
+	internal static bool ExportDatabaseToJson(string jsonFile, JsonSerializerOptions options)
+	{
+		try
+		{
+			using var stream = File.OpenWrite(jsonFile);
+			JsonSerializer.Serialize(stream, Database, options);
+			stream.Close();
 		}
-		internal static void ClearDatabase() {
-			Database.Clear();
-			SaveDatabase();
+		catch (JsonException e)
+		{
+			Logger.Instance.Info($"Failed to serialize database to json because: {e}");
+			return false;
 		}
-		internal static void BlacklistFileEntry(string filePath) {
-			if (!Database.TryGetValue(new FileEntry(filePath), out FileEntry? actualValue))
-				return;
-			actualValue.Flags.Set(EntryFlags.ManuallyExcluded);
+		catch (Exception e)
+		{
+			Logger.Instance.Info($"Failed to export database to json because: {e}");
+			return false;
 		}
-		internal static void UpdateFilePath(string newPath, FileEntry dbEntry) {
-			Database.Remove(dbEntry);
-			dbEntry.Path = newPath;
-			Database.Add(dbEntry);
+		return true;
+	}
+
+	internal static bool ImportDatabaseFromJson(string jsonFile, JsonSerializerOptions options)
+	{
+		try
+		{
+			using var stream = File.OpenRead(jsonFile);
+			Database = JsonSerializer.Deserialize<HashSet<FileEntry>>(stream, options)!;
+			stream.Close();
 		}
-		internal static bool ExportDatabaseToJson(string jsonFile, JsonSerializerOptions options) {
-			try {
-				using var stream = File.OpenWrite(jsonFile);
-				JsonSerializer.Serialize(stream, Database, options);
-				stream.Close();
-			}
-			catch (JsonException e) {
-				Logger.Instance.Info($"Failed to serialize database to json because: {e}");
-				return false;
-			}
-			catch (Exception e) {
-				Logger.Instance.Info($"Failed to export database to json because: {e}");
-				return false;
-			}
-			return true;
+		catch (JsonException e)
+		{
+			Logger.Instance.Info($"Failed to deserialize database from json because: {e}");
+			return false;
 		}
-		internal static bool ImportDatabaseFromJson(string jsonFile, JsonSerializerOptions options) {
-			try {
-				using var stream = File.OpenRead(jsonFile);
-				Database = JsonSerializer.Deserialize<HashSet<FileEntry>>(stream, options)!;
-				stream.Close();
-			}
-			catch (JsonException e) {
-				Logger.Instance.Info($"Failed to deserialize database from json because: {e}");
-				return false;
-			}
-			catch (Exception e) {
-				Logger.Instance.Info($"Failed to import database from json because: {e}");
-				return false;
-			}
-			return true;
+		catch (Exception e)
+		{
+			Logger.Instance.Info($"Failed to import database from json because: {e}");
+			return false;
 		}
+		return true;
 	}
 }

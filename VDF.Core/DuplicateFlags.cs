@@ -14,11 +14,11 @@
 // */
 //
 
-namespace VDF.Core {
-	[Flags]
-	public enum DuplicateFlags : short
-	{
-		None = 0,
-		Flipped = 1,
-	};
-}
+namespace VDF.Core;
+
+[Flags]
+public enum DuplicateFlags : short
+{
+	None = 0,
+	Flipped = 1,
+};

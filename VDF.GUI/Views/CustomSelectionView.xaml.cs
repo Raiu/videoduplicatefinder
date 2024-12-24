@@ -20,36 +20,49 @@ using Avalonia.Markup.Xaml;
 using VDF.GUI.Data;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Views {
-	public class CustomSelectionView : Window {
-		//Designer need this
-		public CustomSelectionView() => InitializeComponent();
-		//Non designer ctor
-		public CustomSelectionView(string a) {
-			DataContext = new CustomSelectionVM(this);
-			InitializeComponent();
-			Owner = ApplicationHelpers.MainWindow;
+namespace VDF.GUI.Views;
 
-			if (SettingsFile.Instance.UseMica &&
-				RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-				Environment.OSVersion.Version.Build >= 22000) {
-				Background = null;
-				TransparencyLevelHint = new List<WindowTransparencyLevel> { WindowTransparencyLevel.Mica };
-				ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.PreferSystemChrome;
-				if (SettingsFile.Instance.DarkMode)
-					this.FindControl<ExperimentalAcrylicBorder>("ExperimentalAcrylicBorderBackgroundBlack")!.IsVisible = true;
-				else
-					this.FindControl<ExperimentalAcrylicBorder>("ExperimentalAcrylicBorderBackgroundWhite")!.IsVisible = true;
-			}
+public class CustomSelectionView : Window
+{
+	//Designer need this
+	public CustomSelectionView() => InitializeComponent();
 
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-				this.FindControl<TextBlock>("TextBlockWindowTitle")!.IsVisible = false;
-			}
-			if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
-				RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+	//Non designer ctor
+	public CustomSelectionView(string a)
+	{
+		DataContext = new CustomSelectionVM(this);
+		InitializeComponent();
+		Owner = ApplicationHelpers.MainWindow;
+
+		if (
+			SettingsFile.Instance.UseMica
+			&& RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			&& Environment.OSVersion.Version.Build >= 22000
+		)
+		{
+			Background = null;
+			TransparencyLevelHint = [WindowTransparencyLevel.Mica];
+			ExtendClientAreaChromeHints = Avalonia
+				.Platform
+				.ExtendClientAreaChromeHints
+				.PreferSystemChrome;
+			if (SettingsFile.Instance.DarkMode)
+				this.FindControl<ExperimentalAcrylicBorder>(
+					"ExperimentalAcrylicBorderBackgroundBlack"
+				)!.IsVisible = true;
+			else
+				this.FindControl<ExperimentalAcrylicBorder>(
+					"ExperimentalAcrylicBorderBackgroundWhite"
+				)!.IsVisible = true;
 		}
 
-		void InitializeComponent() => AvaloniaXamlLoader.Load(this);
-
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+		{
+			this.FindControl<TextBlock>("TextBlockWindowTitle")!.IsVisible = false;
+		}
+		if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
+			RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
 	}
+
+	void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

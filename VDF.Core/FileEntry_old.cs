@@ -16,19 +16,19 @@
 
 using ProtoBuf;
 
-namespace VDF.Core {
+namespace VDF.Core;
 
+[ProtoContract]
+public class FileEntry_old
+{
+	protected FileEntry_old() { }
 
-	[ProtoContract]
-	public class FileEntry_old {
-#pragma warning disable CS8618 // Non-nullable field is uninitialized.
-		protected FileEntry_old() { }
-#pragma warning restore CS8618 // Non-nullable field is uninitialized.
-		[ProtoMember(1)]
-		public string Path { get; set; }
-		[ProtoMember(4)]
-		public MediaInfo? mediaInfo;
-		[ProtoMember(5)]
-		public EntryFlags Flags;
-	}
+	[ProtoMember(1)]
+	public string Path { get; set; } = string.Empty;
+
+	[ProtoMember(4)]
+	public MediaInfo? mediaInfo;
+
+	[ProtoMember(5)]
+	public EntryFlags Flags;
 }

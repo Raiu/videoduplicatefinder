@@ -15,8 +15,10 @@
 //
 
 
-namespace VDF.Core.FFTools {
-	public sealed class FFNotFoundException : Exception {
-		public FFNotFoundException(string? message) : base(message) { }
-	}
+namespace VDF.Core.FFTools;
+
+public sealed class FFNotFoundException : Exception
+{
+	public FFNotFoundException(string? message)
+		: base(message) { }
 }

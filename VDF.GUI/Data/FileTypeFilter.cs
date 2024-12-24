@@ -14,10 +14,11 @@
 // */
 //
 
-namespace VDF.GUI.Data {
-	public enum FileTypeFilter {
-		All,
-		Videos,
-		Images
-	}
+namespace VDF.GUI.Data;
+
+public enum FileTypeFilter
+{
+	All,
+	Videos,
+	Images,
 }

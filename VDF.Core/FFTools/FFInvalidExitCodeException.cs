@@ -15,8 +15,10 @@
 //
 
 
-namespace VDF.Core.FFTools {
-	public sealed class FFInvalidExitCodeException : Exception {
-		public FFInvalidExitCodeException(string message) : base(message) { }
-	}
+namespace VDF.Core.FFTools;
+
+public sealed class FFInvalidExitCodeException : Exception
+{
+	public FFInvalidExitCodeException(string message)
+		: base(message) { }
 }

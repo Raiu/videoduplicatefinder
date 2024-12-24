@@ -18,21 +18,22 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using VDF.GUI.ViewModels;
 
-namespace VDF.GUI.Views {
-	public class DatabaseViewer : Window {
-		public DatabaseViewer() {
-			InitializeComponent();
-			DataContext = new DatabaseViewerVM(this.FindControl<DataGrid>("datagridDatabase")!);
-			Owner = ApplicationHelpers.MainWindow;
-			Closing += DatabaseViewer_Closing;
-			if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
-				RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
-		}
+namespace VDF.GUI.Views;
 
-		private void DatabaseViewer_Closing(object? sender, System.ComponentModel.CancelEventArgs e) 
-			=> ((DatabaseViewerVM)DataContext!).Save();
-
-		void InitializeComponent() => AvaloniaXamlLoader.Load(this);		
-
+public class DatabaseViewer : Window
+{
+	public DatabaseViewer()
+	{
+		InitializeComponent();
+		DataContext = new DatabaseViewerVM(this.FindControl<DataGrid>("datagridDatabase")!);
+		Owner = ApplicationHelpers.MainWindow;
+		Closing += DatabaseViewer_Closing;
+		if (!VDF.GUI.Data.SettingsFile.Instance.DarkMode)
+			RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
 	}
+
+	private void DatabaseViewer_Closing(object? sender, System.ComponentModel.CancelEventArgs e) =>
+		((DatabaseViewerVM)DataContext!).Save();
+
+	void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

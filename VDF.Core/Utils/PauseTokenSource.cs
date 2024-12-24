@@ -15,18 +15,18 @@
 //
 
 
-namespace VDF.Core.Utils {
-	/// <summary>
-	/// Implementation of PauseTokenSource pattern based on the blog post: 
-	/// http://blogs.msdn.com/b/pfxteam/archive/2013/01/13/cooperatively-pausing-async-methods.aspx 
-	/// </summary>
-	public sealed class PauseTokenSource {
-		int paused;
-		public bool IsPaused {
-			get => paused != 0;
-			set => Interlocked.Exchange(ref paused, value ? 1 : 0);
-		}
+namespace VDF.Core.Utils;
 
-
+/// <summary>
+/// Implementation of PauseTokenSource pattern based on the blog post:
+/// http://blogs.msdn.com/b/pfxteam/archive/2013/01/13/cooperatively-pausing-async-methods.aspx
+/// </summary>
+public sealed class PauseTokenSource
+{
+	int paused;
+	public bool IsPaused
+	{
+		get => paused != 0;
+		set => Interlocked.Exchange(ref paused, value ? 1 : 0);
 	}
 }
